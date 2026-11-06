@@ -86,7 +86,9 @@ export function NewOrdersProvider({ children }: { children: ReactNode }) {
   const keyRef = useRef<string | null>(null);
   const onOrdersRef = useRef(false);
 
-  onOrdersRef.current = isOrdersPath(pathname);
+  useEffect(() => {
+    onOrdersRef.current = isOrdersPath(pathname);
+  }, [pathname]);
 
   const refresh = useCallback(async () => {
     const result = await getNewOrderIds();
@@ -115,7 +117,9 @@ export function NewOrdersProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshRef = useRef(refresh);
-  refreshRef.current = refresh;
+  useEffect(() => {
+    refreshRef.current = refresh;
+  }, [refresh]);
 
   // Resolve the per-admin storage key from the authenticated session once.
   useEffect(() => {

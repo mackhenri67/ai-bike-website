@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -79,7 +79,9 @@ export default function EventsManager({
   initialEvents,
   error: initialError,
 }: EventsManagerProps) {
-  const [events, setEvents] = useState<EventRow[]>(initialEvents);
+  const [deletedEventIds, setDeletedEventIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
   const [modal, setModal] = useState<ModalState>(null);
   const [pendingDelete, setPendingDelete] = useState<EventRow | null>(null);
   const [form, setForm] = useState<EventForm>(EMPTY_FORM);
@@ -95,13 +97,12 @@ export default function EventsManager({
   const error = actionError ?? initialError ?? null;
 
   const sorted = useMemo(
-    () => [...events].sort((a, b) => a.event_date.localeCompare(b.event_date)),
-    [events]
+    () =>
+      initialEvents
+        .filter((event) => !deletedEventIds.has(event.id))
+        .sort((a, b) => a.event_date.localeCompare(b.event_date)),
+    [initialEvents, deletedEventIds]
   );
-
-  useEffect(() => {
-    setEvents(initialEvents);
-  }, [initialEvents]);
 
   const updateField = <K extends keyof EventForm>(key: K, value: EventForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -208,7 +209,7 @@ export default function EventsManager({
       setPendingDelete(null);
       return;
     }
-    setEvents((prev) => prev.filter((ev) => ev.id !== id));
+    setDeletedEventIds((prev) => new Set(prev).add(id));
     setPendingDelete(null);
     router.refresh();
   };
