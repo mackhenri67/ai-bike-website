@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useCart } from "../CartContext";
 import { formatPeso, PRODUCT_PLACEHOLDER_SRC } from "../data";
@@ -37,7 +38,47 @@ type Selection = {
   product: BuilderProduct;
   /** axis label → chosen option string. */
   axisValues: Record<string, string>;
+  /** Cleared if the customer replaces the suggested product. */
+  reason?: string;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isAvailableProduct(value: unknown): value is BuilderProduct {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.slug === "string" &&
+    (value.description === null || typeof value.description === "string") &&
+    Array.isArray(value.specs) &&
+    value.specs.every((spec: unknown) => typeof spec === "string") &&
+    typeof value.price === "number" &&
+    Number.isFinite(value.price) &&
+    value.price >= 0 &&
+    (value.compareAtPrice === null ||
+      (typeof value.compareAtPrice === "number" &&
+        Number.isFinite(value.compareAtPrice))) &&
+    typeof value.stock === "number" &&
+    Number.isFinite(value.stock) &&
+    value.stock > 0 &&
+    (value.image === null || typeof value.image === "string")
+  );
+}
+
+function hasChosenOptions(step: BuilderStep, selection?: Selection): boolean {
+  return Boolean(
+    selection &&
+      selection.product.stock > 0 &&
+      step.axes.every(
+        (axis) =>
+          axis.options.length === 0 ||
+          axis.options.includes(selection.axisValues[axis.label])
+      )
+  );
+}
 
 const AI_SUGGESTIONS = [
   "Aggressive downhill, I ride in the rain, 5'10\"",
@@ -59,7 +100,13 @@ export default function CustomBikeBuilder({
   // stepNumber -> Selection
   const [selections, setSelections] = useState<Record<number, Selection>>({});
   const [added, setAdded] = useState(false);
-  const [manual, setManual] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
+  const [budgetInput, setBudgetInput] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [loginRequired, setLoginRequired] = useState(false);
+  const [aiExplanation, setAiExplanation] = useState("");
+  const [aiNotice, setAiNotice] = useState("");
 
   const orderedSteps = useMemo(
     () => [...steps].sort((a, b) => a.stepNumber - b.stepNumber),
@@ -82,10 +129,143 @@ export default function CustomBikeBuilder({
         axisValues: values,
       };
     }
+    setAiGenerated(false);
+    setAiError(null);
+    setLoginRequired(false);
+    setAiExplanation("");
+    setAiNotice("");
     setSelections(initial);
     setCurrentStep(0);
     setAdded(false);
     setView(orderedSteps.length > 0 ? "builder" : "review");
+  };
+
+  const changeAxis = (stepNumber: number, label: string, value: string) => {
+    setSelections((previous) => {
+      const selection = previous[stepNumber];
+      if (!selection) return previous;
+      return {
+        ...previous,
+        [stepNumber]: {
+          ...selection,
+          axisValues: { ...selection.axisValues, [label]: value },
+        },
+      };
+    });
+  };
+
+  const requestAiBuild = async () => {
+    if (aiLoading) return;
+    setAiError(null);
+    setLoginRequired(false);
+    const riderPrompt = prompt.trim();
+    if (riderPrompt.length < 3 || riderPrompt.length > 2_000) {
+      setAiError("Describe how and where you ride using 3 to 2,000 characters.");
+      return;
+    }
+    const budget = budgetInput.trim() === "" ? null : Number(budgetInput);
+    if (
+      budget !== null &&
+      (!Number.isFinite(budget) || budget <= 0 ||
+        !Number.isSafeInteger(Math.round(budget * 100)))
+    ) {
+      setAiError("Enter a positive parts budget in pesos, or leave it empty.");
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const response = await fetch("/api/bike-recommendation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ prompt: riderPrompt, budget }),
+      });
+      let data: unknown;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("The AI builder is unavailable. Please try again.");
+      }
+      if (!response.ok) {
+        setLoginRequired(response.status === 401);
+        let message = isRecord(data) && typeof data.error === "string"
+          ? data.error
+          : "The AI builder could not complete your request.";
+        if (isRecord(data) && Array.isArray(data.missingSteps)) {
+          const missing = data.missingSteps.filter(
+            (name: unknown): name is string => typeof name === "string"
+          );
+          if (missing.length > 0) message += " Unavailable parts: " + missing.join(", ") + ".";
+        }
+        if (
+          response.status === 429 &&
+          isRecord(data) &&
+          typeof data.retryAfter === "number" &&
+          Number.isFinite(data.retryAfter) &&
+          data.retryAfter > 0
+        ) {
+          message += " Try again in " + Math.ceil(data.retryAfter) + " seconds.";
+        }
+        throw new Error(message);
+      }
+      if (
+        !isRecord(data) ||
+        !Array.isArray(data.selections) ||
+        data.selections.length !== orderedSteps.length
+      ) {
+        throw new Error("The AI builder did not return a complete recommendation.");
+      }
+
+      const suggested: Record<number, Selection> = {};
+      for (const choice of data.selections) {
+        if (
+          !isRecord(choice) ||
+          typeof choice.stepNumber !== "number" ||
+          !Number.isInteger(choice.stepNumber) ||
+          typeof choice.productId !== "string" ||
+          typeof choice.reason !== "string" ||
+          !isAvailableProduct(choice.product) ||
+          choice.product.id !== choice.productId ||
+          suggested[choice.stepNumber]
+        ) {
+          throw new Error("The AI builder returned an invalid selection. Please try again.");
+        }
+        const step = orderedSteps.find((item) => item.stepNumber === choice.stepNumber);
+        if (!step || !step.products.some((product) => product.id === choice.productId)) {
+          throw new Error("The catalogue has changed. Refresh the page and request a new build.");
+        }
+        suggested[choice.stepNumber] = {
+          product: choice.product,
+          // Product suggestions do not establish the customer's size or fit.
+          axisValues: {},
+          reason: choice.reason.trim().slice(0, 500),
+        };
+      }
+
+      setSelections(suggested);
+      setAiExplanation(
+        typeof data.explanation === "string" ? data.explanation.slice(0, 1_000) : ""
+      );
+      setAiNotice(
+        typeof data.compatibilityNotice === "string"
+          ? data.compatibilityNotice.slice(0, 1_000)
+          : "Have the shop confirm mechanical compatibility, sizes, and final fit before assembly."
+      );
+      setAiGenerated(true);
+      setCurrentStep(0);
+      setAdded(false);
+      setView("review");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (error) {
+      setAiError(
+        error instanceof Error && !(error instanceof TypeError)
+          ? error.message
+          : "The AI builder could not be reached. Please try again."
+      );
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   if (stepsError) {
@@ -149,7 +329,7 @@ export default function CustomBikeBuilder({
           </div>
 
           {/* AI builder (optional) */}
-          <section className={styles.aiCard}>
+          <section className={styles.aiCard} aria-busy={aiLoading}>
             <div className={styles.aiHead}>
               <svg
                 className={styles.aiIcon}
@@ -167,9 +347,9 @@ export default function CustomBikeBuilder({
             </div>
 
             <p className={styles.aiDesc}>
-              Describe how and where you ride — terrain, weather, budget, your
-              height and we&apos;ll pick every part for you. You can change
-              anything afterwards.
+              Describe your terrain, weather, height, and riding needs.
+              AI will suggest available parts for you to review. You can set
+              your sizes and colours before adding the build to your cart.
             </p>
 
             <div className={styles.textarea}>
@@ -179,8 +359,26 @@ export default function CustomBikeBuilder({
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 aria-label="Describe how and where you ride"
+                maxLength={2_000}
+                disabled={aiLoading}
               />
             </div>
+
+            <label className={styles.budgetField}>
+              <span className={styles.axisLabel}>Maximum parts budget (₱, optional)</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="0.01"
+                value={budgetInput}
+                onChange={(event) => setBudgetInput(event.target.value)}
+                className={styles.budgetInput}
+                placeholder="For example, 50000"
+                aria-label="Maximum parts budget (PHP)"
+                disabled={aiLoading}
+              />
+            </label>
 
             <div className={styles.chips}>
               {AI_SUGGESTIONS.map((suggestion) => (
@@ -189,6 +387,7 @@ export default function CustomBikeBuilder({
                   type="button"
                   className={styles.chip}
                   onClick={() => setPrompt(suggestion)}
+                  disabled={aiLoading}
                 >
                   {suggestion}
                 </button>
@@ -198,10 +397,8 @@ export default function CustomBikeBuilder({
             <button
               type="button"
               className={styles.buildBtn}
-              onClick={() => {
-                setManual(true);
-                startBuilding();
-              }}
+              onClick={requestAiBuild}
+              disabled={aiLoading}
             >
               <svg
                 className={styles.buildIcon}
@@ -214,8 +411,21 @@ export default function CustomBikeBuilder({
                   fill="currentColor"
                 />
               </svg>
-              Build it for me
+              {aiLoading ? "Building your recommendation…" : "Build it for me"}
             </button>
+            {aiLoading ? (
+              <p className={styles.aiDesc} role="status">
+                Choosing parts from the available catalogue. This may take a moment.
+              </p>
+            ) : null}
+            {aiError ? (
+              <p className={styles.errorText} role="alert">
+                {aiError}
+                {loginRequired ? (
+                  <> <Link href="/login?next=%2Fcustom-bike-builder">Sign in to request a build</Link>.</>
+                ) : null}
+              </p>
+            ) : null}
           </section>
 
           <h2 className={styles.partsHeading}>Choose the parts yourself</h2>
@@ -240,10 +450,8 @@ export default function CustomBikeBuilder({
           <button
             type="button"
             className={styles.startBuilding}
-            onClick={() => {
-              setManual(false);
-              startBuilding();
-            }}
+            onClick={startBuilding}
+            disabled={aiLoading}
           >
             Start building
             <svg
@@ -273,8 +481,17 @@ export default function CustomBikeBuilder({
     const step = orderedSteps[currentStep];
     const selection = selections[step.stepNumber];
     const isLast = currentStep === orderedSteps.length - 1;
+    const canContinue = hasChosenOptions(step, selection);
+    const products = selection && !step.products.some(
+      (product) => product.id === selection.product.id
+    )
+      ? [selection.product, ...step.products]
+      : step.products.map((product) =>
+          product.id === selection?.product.id ? selection.product : product
+        );
 
     const chooseProduct = (product: BuilderProduct) => {
+      setAiExplanation("");
       setSelections((prev) => ({
         ...prev,
         [step.stepNumber]: {
@@ -284,23 +501,8 @@ export default function CustomBikeBuilder({
       }));
     };
 
-    const chooseAxis = (label: string, value: string) => {
-      setSelections((prev) => ({
-        ...prev,
-        [step.stepNumber]: {
-          product:
-            prev[step.stepNumber]?.product ??
-            step.products.find((p) => p.stock > 0) ??
-            step.products[0],
-          axisValues: {
-            ...(prev[step.stepNumber]?.axisValues ?? {}),
-            [label]: value,
-          },
-        },
-      }));
-    };
-
     const handleNext = () => {
+      if (!canContinue) return;
       if (isLast) {
         setView("review");
       } else {
@@ -337,10 +539,9 @@ export default function CustomBikeBuilder({
 
           {/* Product options */}
           <div className={styles.productGrid}>
-            {step.products.map((product) => {
+            {products.map((product) => {
               const active =
-                selection?.product.id === product.id ||
-                (!selection && product === step.products[0]);
+                selection?.product.id === product.id;
               const outOfStock = product.stock <= 0;
               const onSale =
                 product.compareAtPrice !== null &&
@@ -401,17 +602,20 @@ export default function CustomBikeBuilder({
               <div className={styles.axisGrid}>
                 {step.axes.map((axis) => {
                   const current =
-                    selection?.axisValues[axis.label] ?? axis.options[0];
+                    selection?.axisValues[axis.label] ?? "";
                   return (
                     <label key={axis.label} className={styles.axisField}>
                       <span className={styles.axisLabel}>{axis.label}</span>
                       <select
                         className={styles.axisSelect}
                         value={current}
+                        aria-label={step.name + " " + axis.label}
+                        disabled={!selection || axis.options.length === 0}
                         onChange={(event) =>
-                          chooseAxis(axis.label, event.target.value)
+                          changeAxis(step.stepNumber, axis.label, event.target.value)
                         }
                       >
+                        <option value="" disabled>Choose {axis.label.toLowerCase()}</option>
                         {axis.options.map((option) => (
                           <option key={option} value={option}>
                             {option}
@@ -439,6 +643,7 @@ export default function CustomBikeBuilder({
               type="button"
               className={styles.nextBtn}
               onClick={handleNext}
+              disabled={!canContinue}
             >
               {isLast ? "Review build" : "Next"}
               <svg
@@ -477,7 +682,12 @@ export default function CustomBikeBuilder({
     }))
     .filter((entry) => entry.selection);
 
+  const buildComplete = orderedSteps.every(
+    (step) => hasChosenOptions(step, selections[step.stepNumber])
+  );
+
   const handleAddToCart = () => {
+    if (!buildComplete || added) return;
     for (const entry of orderedSelections) {
       const { step, selection } = entry;
       const axisEntries = Object.entries(selection!.axisValues);
@@ -511,11 +721,24 @@ export default function CustomBikeBuilder({
   return (
     <main className={styles.page}>
       <div className={styles.column}>
-        <h1 className={styles.title}>Your custom build</h1>
+        <h1 className={styles.title}>
+          {aiGenerated ? "Your AI-assisted build" : "Your custom build"}
+        </h1>
         <p className={styles.lead}>
           Review every part below. You can go back to any step to make changes
           before adding your build to the cart.
         </p>
+
+        {aiGenerated ? (
+          <section className={styles.optionsCard} aria-label="AI recommendation">
+            <h2 className={styles.optionsTitle}>Suggested parts for your request</h2>
+            {aiExplanation ? <p className={styles.aiDesc}>{aiExplanation}</p> : null}
+            <p className={styles.aiDesc}>{aiNotice}</p>
+            <p className={styles.aiDesc}>
+              Confirm the options below before adding the build to your cart.
+            </p>
+          </section>
+        ) : null}
 
         <button
           type="button"
@@ -548,6 +771,32 @@ export default function CustomBikeBuilder({
                   {axisText ? (
                     <p className={styles.reviewAxes}>{axisText}</p>
                   ) : null}
+                  {selection!.reason ? (
+                    <p className={styles.reviewReason}>{selection!.reason}</p>
+                  ) : null}
+                  {aiGenerated && step.axes.some((axis) => axis.options.length > 0) ? (
+                    <div className={styles.reviewOptions}>
+                      {step.axes.filter((axis) => axis.options.length > 0).map((axis) => (
+                        <label key={axis.label} className={styles.reviewOption}>
+                          <span className={styles.axisLabel}>{axis.label}</span>
+                          <select
+                            className={styles.axisSelect}
+                            value={selection!.axisValues[axis.label] ?? ""}
+                            aria-label={step.name + " " + axis.label}
+                            disabled={added}
+                            onChange={(event) =>
+                              changeAxis(step.stepNumber, axis.label, event.target.value)
+                            }
+                          >
+                            <option value="" disabled>Choose {axis.label.toLowerCase()}</option>
+                            {axis.options.map((option) => (
+                              <option key={option} value={option}>{option}</option>
+                            ))}
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 <p className={styles.reviewPrice}>
                   {formatPeso(selection!.product.price)}
@@ -563,27 +812,37 @@ export default function CustomBikeBuilder({
         </div>
 
         <p className={styles.note}>
-          {manual
-            ? "Your parts below were chosen by the AI builder as a starting point — review or edit anything before adding to cart."
+          {aiGenerated
+            ? "AI suggested the starting parts. Your edits are included in the total. Shipping is calculated at checkout."
             : "Shipping is calculated at checkout. You can change any part below before adding to cart."}
         </p>
+        {!buildComplete ? (
+          <p className={styles.note} role="status">
+            Choose the sizes, colours, and other available options above to complete your build.
+          </p>
+        ) : null}
 
         <div className={styles.reviewActions}>
           <button
             type="button"
             className={styles.backBtn}
             onClick={() => {
-              setCurrentStep(orderedSteps.length - 1);
-              setView("builder");
+              if (aiGenerated) {
+                setAiError(null);
+                setView("landing");
+              } else {
+                setCurrentStep(orderedSteps.length - 1);
+                setView("builder");
+              }
             }}
           >
-            Back
+            {aiGenerated ? "Change request" : "Back"}
           </button>
           <button
             type="button"
             className={styles.addToCart}
             onClick={handleAddToCart}
-            disabled={added}
+            disabled={added || !buildComplete}
           >
             {added ? (
               "Added to Cart ✓"
