@@ -1,11 +1,10 @@
 "use client";
 
 import { Fragment, useState, type FormEvent, type KeyboardEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CatalogProduct } from "@/lib/products";
 import ProductCard from "../ProductCard";
-import { ChevronDownIcon, SearchIcon, WrenchIcon } from "../icons";
+import { ChevronDownIcon, SearchIcon } from "../icons";
 import styles from "./BikeEquipment.module.css";
 
 export type EquipmentCategoryRow = {
@@ -34,7 +33,7 @@ type BikeEquipmentProps = {
 
 /**
  * Interactive storefront "Bike Equipment" browsing block: an expandable
- * Filter table (Category | Customization fields | Items), a search field,
+ * Filter table (Category | Items), a search field,
  * a sort control and the product grid. Every piece of product/category
  * data is passed in from the server page — nothing is hardcoded here.
  *
@@ -161,7 +160,6 @@ export default function BikeEquipment({
               <thead>
                 <tr>
                   <th scope="col">Category</th>
-                  <th scope="col">Customization fields</th>
                   <th scope="col" className={styles.itemsCol}>
                     Items
                   </th>
@@ -179,7 +177,6 @@ export default function BikeEquipment({
                   aria-pressed={activeCategory === null}
                 >
                   <td className={styles.categoryCell}>All products</td>
-                  <td className={styles.customizationCell}>All categories</td>
                   <td className={styles.itemsCell}>{allProductsCount}</td>
                 </tr>
                 {rows.map((row) => (
@@ -197,9 +194,6 @@ export default function BikeEquipment({
                       aria-pressed={activeCategory === row.slug}
                     >
                       <td className={styles.categoryCell}>{row.name}</td>
-                      <td className={styles.customizationCell}>
-                        {row.customization}
-                      </td>
                       <td className={styles.itemsCell}>{row.count}</td>
                     </tr>
                     {(row.children ?? []).map((child, childIdx) => {
@@ -226,9 +220,6 @@ export default function BikeEquipment({
                           <td className={styles.subCategoryCell}>
                             {child.name}
                           </td>
-                          <td className={styles.customizationCell}>
-                            {child.customization}
-                          </td>
                           <td className={styles.itemsCell}>{child.count}</td>
                         </tr>
                       );
@@ -239,12 +230,7 @@ export default function BikeEquipment({
             </table>
           </div>
 
-          <div className={styles.filterFooter}>
-            <Link href="/build-a-bike" className={styles.buildLink}>
-              <WrenchIcon size={16} />
-              <span>Build a bike from these parts</span>
-            </Link>
-          </div>
+
         </div>
       ) : null}
 

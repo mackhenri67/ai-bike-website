@@ -22,13 +22,16 @@ export async function saveProductAction(
 ): Promise<{ error: string | null }> {
   await requireAdmin();
 
-  if (!input.name.trim()) {
+  if (!input || typeof input.name !== "string" || !input.name.trim()) {
     return { error: "Product name is required." };
   }
   if (input.category_id && !isUuid(input.category_id)) {
     return { error: "Please choose a valid category." };
   }
 
+  if (!Array.isArray(input.variants) || input.variants.length > 200 || input.variants.some((row) => !row || typeof row !== "object" || !row.options || typeof row.options !== "object" || Array.isArray(row.options) || Object.keys(row.options).length < 1 || Object.keys(row.options).length > 10 || Object.entries(row.options).some(([key, value]) => key.trim().length < 1 || key.length > 80 || typeof value !== "string" || value.trim().length < 1 || value.length > 150) || !Number.isSafeInteger(row.stock) || row.stock < 0 || !Number.isFinite(row.price) || row.price <= 0)) {
+    return { error: "Check customization combinations, stock counts and prices." };
+  }
   const result = input.id
     ? await updateProduct(input.id, input)
     : await createProduct(input);
@@ -42,6 +45,7 @@ export async function saveProductAction(
   revalidatePath("/products");
   revalidatePath(`/products/${result.data.slug}`);
   revalidatePath("/admin/dashboard");
+  revalidatePath("/custom-bike-builder");
 
   return { error: null };
 }
@@ -58,6 +62,7 @@ export async function deleteProductAction(
   revalidatePath("/");
   revalidatePath("/products");
   revalidatePath("/admin/dashboard");
+  revalidatePath("/custom-bike-builder");
 
   return { error: null };
 }

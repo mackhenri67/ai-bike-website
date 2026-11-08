@@ -478,3 +478,11 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.combinationRow { margin: 0; min-width: 0; align-content: start; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; display: grid; gap: 12px; }
+
+.combinationGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.combinationFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.combinationRow p { overflow-wrap: anywhere; }
+.combinationFields input { min-width: 0; width: 100%; }
+@media (max-width: 640px) { .combinationGrid { grid-template-columns: minmax(0, 1fr); } }

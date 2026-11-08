@@ -30,6 +30,8 @@ export type ProductImageRow = {
 };
 
 export type ProductVariantRow = {
+  options?: Record<string, string>;
+  retired?: boolean;
   id: string;
   product_id: string;
   sku: string | null;
@@ -91,6 +93,7 @@ export type PaymentStatus =
   | "rejected";
 
 export type OrderItemRow = {
+  product?: { product_images?: { url: string; is_primary: boolean; sort_order: number }[] } | null;
   id: string;
   order_id: string;
   product_id: string | null;
@@ -180,6 +183,7 @@ export type DashboardStats = {
 
 /** Product payload sent from the admin Products form (server action input). */
 export type ProductInput = {
+  expected_stock?: number;
   id?: string | null;
   category_id: string | null;
   name: string;
@@ -198,6 +202,9 @@ export type ProductInput = {
   sort_order: number;
   images: { url: string; alt: string | null }[];
   variants: {
+    id?: string;
+    expected_stock?: number;
+    options: Record<string, string>;
     sku: string | null;
     size: string | null;
     color: string | null;

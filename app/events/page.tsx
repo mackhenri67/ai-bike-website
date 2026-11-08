@@ -28,8 +28,10 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-export default async function EventsPage() {
-  const result = await listPublishedEvents();
+export default async function EventsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+  const { view } = await searchParams;
+  const showAll = view === "all";
+  const result = await listPublishedEvents(!showAll);
   const events = result.data ?? [];
 
   return (
@@ -45,6 +47,10 @@ export default async function EventsPage() {
             </p>
           </header>
 
+          <nav className={styles.tabs} aria-label="Event filters">
+            <Link href="/events" className={!showAll ? styles.activeTab : styles.tab} aria-current={!showAll ? "page" : undefined}>Upcoming Events</Link>
+            <Link href="/events?view=all" className={showAll ? styles.activeTab : styles.tab} aria-current={showAll ? "page" : undefined}>All Events</Link>
+          </nav>
           {result.error ? (
             <p className={styles.error} role="alert">
               {result.error}
@@ -53,7 +59,7 @@ export default async function EventsPage() {
 
           {events.length === 0 ? (
             <p className={styles.empty}>
-              No upcoming events right now. Check back soon!
+              {showAll ? "No published events right now." : "No upcoming events right now. Check All Events for previous events."}
             </p>
           ) : (
             <ul className={styles.grid}>

@@ -34,7 +34,7 @@ export default async function EventPaymentPage({
 
   // Already verified? Show the ticket instead of re-collecting payment.
   if (registration.payment_status === "paid") {
-    redirect(`/my-events?code=${encodeURIComponent(registrationCode)}`);
+    redirect(`/my-events/${encodeURIComponent(registrationCode)}`);
   }
 
   const settingsResult = await getGcashSettings();

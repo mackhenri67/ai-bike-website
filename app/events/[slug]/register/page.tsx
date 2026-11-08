@@ -4,6 +4,7 @@ import { getUser } from "@/lib/supabase/server";
 import { getPublishedEventBySlug } from "@/lib/data/customer/events";
 import CustomerHeader from "@/components/customer/CustomerHeader";
 import CustomerFooter from "@/components/customer/CustomerFooter";
+import EventSteps from "@/components/customer/EventSteps";
 import RegisterView from "./register-view";
 import styles from "./register.module.css";
 
@@ -34,13 +35,12 @@ export default async function EventRegisterPage({
       <CustomerHeader />
       <main className={styles.page}>
         <div className={styles.container}>
-          <div className={styles.card}>
-            <h1 className={styles.title}>{event.title}</h1>
+            <h1 className={styles.title}>Registration</h1>
             <p className={styles.subtitle}>
-              Enter your rider details to reserve a slot.
+              {new Date(event.event_date).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "full" })} · {event.capacity > 0 ? `${Math.max(0, event.capacity - event.slots_booked)} slots left` : "Open registration"}
             </p>
-            <RegisterView event={event} />
-          </div>
+            <EventSteps current={1} />
+            <RegisterView event={event} email={user.email} fullName={typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : undefined} />
         </div>
       </main>
       <CustomerFooter />

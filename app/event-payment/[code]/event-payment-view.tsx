@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState, type ChangeEvent } from "react";
+import EventSteps from "@/components/customer/EventSteps";
 import Link from "next/link";
 import { uploadPaymentProof } from "@/lib/storage/upload-proof";
 import type { GcashSettingsRow } from "@/lib/data/types";
@@ -50,39 +51,17 @@ export default function EventPaymentView({
   const fileRef = useRef<HTMLInputElement>(null);
   const objectUrlRef = useRef<string | null>(null);
 
-  if (state.success) {
-    return (
-      <div className={styles.successCard}>
-        <div className={styles.successIcon}>✓</div>
-        <h2 className={styles.successTitle}>Payment submitted</h2>
-        <p className={styles.successText}>
-          Thanks! We&apos;ll verify your GCash payment for{" "}
-          <strong>{eventTitle}</strong> and update its status after review. You
-          can track the status in <Link href="/my-events">My Events</Link>.
-        </p>
-        <Link href="/my-events" className={styles.payButton}>
-          View my events
-        </Link>
-      </div>
-    );
-  }
-
-  if (paymentStatus === "pending" && submittedProof) {
-    return (
-      <div className={styles.successCard}>
-        <h2>Payment awaiting review</h2>
-        <p>Reference: {paymentReference || "Not supplied"}</p>
-        <p>
-          Your screenshot has been submitted. Track the result in My Events.
-        </p>
-        <img
-          src={submittedProof}
-          alt="Your submitted payment proof"
-          style={{ maxWidth: "100%", maxHeight: 360 }}
-        />
-        <Link href="/my-events">My Events</Link>
-      </div>
-    );
+  if (state.success || (paymentStatus === "pending" && submittedProof)) {
+    return <>
+      <h1 className={styles.pageTitle}>Registration received</h1>
+      <p className={styles.lead}>Your payment proof is awaiting review. Keep your registration code for reference.</p>
+      <EventSteps current={3} />
+      <section className={styles.successCard}>
+        <div className={styles.successHeader}><div><small>LNR Cycle Center registration</small><h2>{eventTitle}</h2></div><span className={styles.pendingBadge}>Awaiting review</span></div>
+        <div className={styles.successBody}><p className={styles.code}>{registrationCode}</p><p>We will update your payment status after verification.</p><dl><div><dt>Amount</dt><dd>{formatCurrency(amount)}</dd></div><div><dt>GCash reference</dt><dd>{paymentReference || "See your submitted payment details"}</dd></div></dl></div>
+      </section>
+      <div className={styles.successActions}><Link href={`/my-events/${encodeURIComponent(registrationCode)}`} className={styles.payButton}>Open ticket page</Link><Link href="/events" className={styles.secondary}>Browse more events</Link></div>
+    </>;
   }
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -136,17 +115,15 @@ export default function EventPaymentView({
   };
 
   return (
+    <>
+      <h1 className={styles.pageTitle}>Online Payment</h1>
+      <p className={styles.lead}>{eventTitle} · {registrationCode}</p>
+      <EventSteps current={2} />
+      {paymentStatus === "rejected" ? <p className={styles.error} role="alert">Payment rejected: {rejectionReason || "Please check your payment details and submit a new proof."}</p> : null}
     <div className={styles.card}>
-      <div className={styles.summary}>
-        <h2 className={styles.summaryTitle}>{eventTitle}</h2>
-        <p className={styles.summaryCode}>
-          Registration: <strong>{registrationCode}</strong>
-        </p>
-        <p className={styles.summaryAmount}>
-          Amount due: <strong>{formatCurrency(amount)}</strong>
-        </p>
-      </div>
-
+      <aside className={styles.paymentAside}>
+        <h2 className={styles.summaryTitle}>GCash Payment</h2>
+        <p className={styles.qrCaption}>Scan the QR code and submit your payment proof.</p>
       {settings?.qr_code_url ? (
         <div className={styles.qrBlock}>
           <p className={styles.qrCaption}>Scan this QR code with GCash</p>
@@ -168,6 +145,18 @@ export default function EventPaymentView({
         </p>
       )}
 
+      <div className={styles.summary}>
+        <h2 className={styles.summaryTitle}>{eventTitle}</h2>
+        <p className={styles.summaryCode}>
+          Registration: <strong>{registrationCode}</strong>
+        </p>
+        <p className={styles.summaryAmount}>
+          Amount due: <strong>{formatCurrency(amount)}</strong>
+        </p>
+      </div>
+
+      </aside>
+
       <form
         action={formAction}
         onSubmit={handleSubmit}
@@ -180,6 +169,30 @@ export default function EventPaymentView({
           value={registrationCode}
         />
         <input type="hidden" name="screenshot_url" value={screenshotUrl} />
+
+        <label className={styles.field}>
+          <span className={styles.label}>Payment screenshot *</span>
+          <input
+            ref={fileRef}
+            name="screenshot"
+            type="file"
+            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
+            className={styles.file}
+            onChange={handleFileChange}
+            disabled={uploading}
+          />
+          <span className={styles.uploadCaption}>↑ Click to upload screenshot <small>PNG or JPG up to 10MB</small></span>
+          {uploading ? (
+            <p className={styles.uploadHint}>Uploading screenshot…</p>
+          ) : null}
+          {preview ? (
+            <img
+              src={preview}
+              alt="Payment screenshot preview"
+              className={styles.preview}
+            />
+          ) : null}
+        </label>
 
         <label className={styles.field}>
           <span className={styles.label}>Sender name *</span>
@@ -208,28 +221,6 @@ export default function EventPaymentView({
           />
         </label>
 
-        <label className={styles.field}>
-          <span className={styles.label}>Payment screenshot *</span>
-          <input
-            ref={fileRef}
-            name="screenshot"
-            type="file"
-            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
-            className={styles.file}
-            onChange={handleFileChange}
-            disabled={uploading}
-          />
-          {uploading ? (
-            <p className={styles.uploadHint}>Uploading screenshot…</p>
-          ) : null}
-          {preview ? (
-            <img
-              src={preview}
-              alt="Payment screenshot preview"
-              className={styles.preview}
-            />
-          ) : null}
-        </label>
 
         {uploadError ? (
           <p className={styles.error} role="alert">
@@ -252,9 +243,10 @@ export default function EventPaymentView({
             ? "Submitting…"
             : uploading
               ? "Uploading…"
-              : "Submit payment"}
+              : "Confirm Payment"}
         </button>
       </form>
     </div>
+    </>
   );
 }

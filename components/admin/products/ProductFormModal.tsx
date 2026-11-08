@@ -1,5 +1,6 @@
 "use client";
 
+import { legacyOptions, optionKey } from "@/lib/product-options";
 import { useState } from "react";
 import type {
   CategoryRow,
@@ -45,6 +46,9 @@ export interface ProductFormPayload {
 }
 
 type VariantForm = {
+  id?: string;
+  expectedStock?: number;
+  options: Record<string, string>;
   key: string;
   size: string;
   color: string;
@@ -118,6 +122,14 @@ function formStateFromProduct(
     return false;
   });
 
+  for (const variant of product.product_variants ?? []) {
+    if (variant.retired) continue;
+    for (const [label, value] of Object.entries(legacyOptions(variant))) {
+      const flag = axes.find((axis) => axis.label === label)?.flag ?? label;
+      customizationValues[flag] = [...new Set([...(customizationValues[flag] ?? []), value])];
+    }
+  }
+
   return {
     form: {
       ...EMPTY_FORM,
@@ -138,8 +150,11 @@ function formStateFromProduct(
       isNewArrival: product.is_new_arrival,
       thumbnail: images[0]?.url ?? "",
       images: images.slice(1).map((image) => image.url),
-      variants: (product.product_variants ?? []).map((variant) => ({
+      variants: (product.product_variants ?? []).filter((v) => !v.retired).map((variant) => ({
         key: variant.id ?? crypto.randomUUID(),
+        id: variant.id,
+        expectedStock: variant.stock,
+        options: legacyOptions(variant),
         size: variant.size ?? "",
         color: variant.color ?? "",
         sku: variant.sku ?? "",
@@ -211,14 +226,19 @@ export default function ProductFormModal({
     }));
   };
 
-  const addVariant = () => {
-    setForm((current) => ({
-      ...current,
-      variants: [
-        ...current.variants,
-        { key: crypto.randomUUID(), size: "", color: "", sku: "", price: "0", stock: "0", available: true },
-      ],
-    }));
+  const generateCombinations = () => {
+    const enabled = axes.filter((axis) => (customizationValues[axis.flag] ?? []).length > 0);
+    const count = enabled.reduce((n, axis) => n * customizationValues[axis.flag].length, 1);
+    if (!enabled.length || count > 200) {
+      setFormError("Choose options first. Use at most 200 combinations per product."); return;
+    }
+    let rows: Record<string, string>[] = [{}];
+    for (const axis of enabled) rows = rows.flatMap((row) => customizationValues[axis.flag].map((value) => ({ ...row, [axis.label]: value })));
+    setForm((current) => ({ ...current, variants: rows.map((options) => {
+      const previous = current.variants.find((v) => optionKey(v.options) === optionKey(options));
+      return previous ?? { key: crypto.randomUUID(), options, size: "", color: "", sku: "", price: current.price, stock: "1", available: true };
+    }) }));
+    setFormError(null);
   };
 
   const removeVariant = (key: string) => {
@@ -246,7 +266,10 @@ export default function ProductFormModal({
   // (UUID). Resolve the selected category's slug so the axes (customization
   // fields) render for the chosen category instead of always falling back to [].
   const selectedCategory = categories.find((c) => c.id === form.categoryId);
-  const axes = getCategoryAxes(selectedCategory?.slug);
+  const categoryAxes = getCategoryAxes(selectedCategory?.slug);
+  const knownLabels = new Set(categoryAxes.map((axis) => axis.label));
+  const extraLabels = [...new Set(form.variants.flatMap((v) => Object.keys(v.options)))].filter((label) => !knownLabels.has(label));
+  const axes: CategoryAxis[] = [...categoryAxes, ...extraLabels.map((label) => ({ flag: label, field: label, label, hint: "Saved product option", presets: [], placeholder: "Add option" }))];
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -264,6 +287,17 @@ export default function ProductFormModal({
         next[key] = `Add at least one option to ${key}.`;
       }
     });
+    const enabledAxes = axes.filter((axis) => (customizationValues[axis.flag] ?? []).length);
+    if (enabledAxes.length && !form.variants.length) next.combinations = "Generate combinations and set their stock before saving.";
+    const keys = new Set<string>();
+    for (const row of form.variants) {
+      if (enabledAxes.length !== Object.keys(row.options).length || !enabledAxes.every((axis) => customizationValues[axis.flag]?.includes(row.options[axis.label]))) next.combinations = "Options changed. Regenerate combinations before saving.";
+      const key = optionKey(row.options);
+      if (keys.has(key)) next.combinations = "Each combination must be unique.";
+      keys.add(key);
+      if (!Number.isInteger(Number(row.stock)) || Number(row.stock) < 0 || !Number.isFinite(Number(row.price)) || Number(row.price) <= 0) next.combinations = "Every combination needs a positive price and a whole, nonnegative stock count.";
+    }
+    setFormError(next.combinations ?? null);
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -454,7 +488,7 @@ export default function ProductFormModal({
             <div>
               <h3 className={styles.sectionTitle}>Customization Fields</h3>
               <p className={styles.sectionHint}>
-                Tick the fields this product actually comes in.
+                Choose the fields and values customers can select. These appear as purchase options, not specifications.
               </p>
               <div className={styles.spaceY3}>
                 {axes.map((axis: CategoryAxis) => (
@@ -501,6 +535,23 @@ export default function ProductFormModal({
               </p>
             </div>
           )}
+
+          <div>
+            <h3 className={styles.sectionTitle}>Combination stock</h3>
+            <p className={styles.inlineNote}>Choose customization fields above, then generate combinations. Keep only combinations you sell. Each combination has its own stock and price. New combinations start with 1 in stock. Uncheck Available to hide a combination without losing its stock.</p>
+            <button type="button" onClick={generateCombinations} className={styles.secondaryButton}>Generate / refresh combinations</button>
+            <div className={styles.combinationGrid}>
+            {form.variants.map((row, index) => <div key={row.key} className={styles.combinationRow}>
+              <p><strong>{Object.entries(row.options).map(([label, value]) => `${label}: ${value}`).join(" · ")}</strong></p>
+              <div className={styles.combinationFields}>
+                <label className={styles.field}>Price (₱)<input aria-label={`Combination ${index + 1} price`} className={styles.input} type="number" min="0.01" step="0.01" value={row.price} onChange={(e) => setVariant(row.key, { price: e.target.value })} /></label>
+                <label className={styles.field}>Stock<input aria-label={`Combination ${index + 1} stock`} className={styles.input} type="number" min="0" step="1" value={row.stock} onChange={(e) => setVariant(row.key, { stock: e.target.value })} /></label>
+              </div>
+              <label><input type="checkbox" checked={row.available} onChange={(e) => setVariant(row.key, { available: e.target.checked })} /> Available</label>
+              <button type="button" className={styles.secondaryButton} onClick={() => removeVariant(row.key)}>Remove combination</button>
+            </div>)}
+            </div>
+          </div>
 
           {/* Images */}
           <div>
@@ -711,11 +762,12 @@ export default function ProductFormModal({
                 min="0"
                 step="1"
                 className={styles.input}
-                value={form.stock}
+                disabled={form.variants.length > 0}
+                value={form.variants.length ? String(form.variants.reduce((sum, row) => sum + (row.available ? Number(row.stock) || 0 : 0), 0)) : form.stock}
                 onChange={(e) => updateField("stock", e.target.value)}
               />
               <span className={styles.formHint}>
-                When variants exist, the total stock is the sum of all variant stock.
+                When combinations exist, sellable stock is calculated from available combinations. Base stock applies only to products without choices.
               </span>
             </div>
           </div>
@@ -758,129 +810,7 @@ export default function ProductFormModal({
             </div>
           </div>
 
-          {/* Variants */}
-          <div>
-            <h3 className={styles.sectionTitle}>Variants</h3>
-            <p className={styles.inlineNote}>
-              Optional size/color combinations. When at least one variant is listed, the product&apos;s stock and price are driven by the variants.
-            </p>
-            {form.variants.map((variant, index) => (
-              <div key={variant.key} className={styles.variantRow}>
-                <div className={styles.field}>
-                  <label className={styles.label} htmlFor={`variant-size-${variant.key}`}>Size</label>
-                  <input
-                    id={`variant-size-${variant.key}`}
-                    type="text"
-                    className={styles.input}
-                    value={variant.size}
-                    onChange={(e) => setVariant(variant.key, { size: e.target.value })}
-                    placeholder="e.g. 27.5, 29, Medium"
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.label} htmlFor={`variant-color-${variant.key}`}>Color</label>
-                  <input
-                    id={`variant-color-${variant.key}`}
-                    type="text"
-                    className={styles.input}
-                    value={variant.color}
-                    onChange={(e) => setVariant(variant.key, { color: e.target.value })}
-                    placeholder="e.g. Matte Black"
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.label} htmlFor={`variant-sku-${variant.key}`}>SKU</label>
-                  <input
-                    id={`variant-sku-${variant.key}`}
-                    type="text"
-                    className={styles.input}
-                    value={variant.sku}
-                    onChange={(e) => setVariant(variant.key, { sku: e.target.value })}
-                    placeholder="Optional"
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.label} htmlFor={`variant-price-${variant.key}`}>Price (₱)</label>
-                  <input
-                    id={`variant-price-${variant.key}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className={styles.input}
-                    value={variant.price}
-                    onChange={(e) => setVariant(variant.key, { price: e.target.value })}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.label} htmlFor={`variant-stock-${variant.key}`}>Stock</label>
-                  <input
-                    id={`variant-stock-${variant.key}`}
-                    type="number"
-                    min="0"
-                    step="1"
-                    className={styles.input}
-                    value={variant.stock}
-                    onChange={(e) => setVariant(variant.key, { stock: e.target.value })}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.checkboxVariant}>
-                    <input
-                      type="checkbox"
-                      checked={variant.available}
-                      onChange={(e) => setVariant(variant.key, { available: e.target.checked })}
-                    />
-                    Available
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeVariant(variant.key)}
-                  aria-label={`Remove variant ${index + 1}`}
-                  className={styles.removeButton}
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M3 6h18" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    <path d="M10 11v6" />
-                    <path d="M14 11v6" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addVariant}
-              className={styles.secondaryButton}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M12 5v14" />
-                <path d="M5 12h14" />
-              </svg>
-              Add variant
-            </button>
-          </div>
+
         </div>
 
         <div className={styles.footer}>

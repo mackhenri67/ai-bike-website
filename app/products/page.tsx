@@ -10,6 +10,7 @@ import {
   type CatalogProduct,
 } from "@/lib/products";
 import { getCategoryAxes } from "@/components/admin/products/categoryConfig";
+import { isPartProduct } from "@/lib/catalog-groups";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -75,20 +76,6 @@ const EQUIPMENT_GROUPS: {
   },
   { slug: "accessories", fallback: "Accessories", children: [] },
 ];
-
-/** Every category slug that belongs to the Parts group. */
-const PART_SLUGS = new Set(
-  EQUIPMENT_GROUPS.find((g) => g.slug === "parts")?.children.map(
-    (c) => c.slug
-  ) ?? []
-);
-
-function isPartProduct(product: CatalogProduct): boolean {
-  return (
-    product.categorySlug === "parts" ||
-    (product.categorySlug !== null && PART_SLUGS.has(product.categorySlug))
-  );
-}
 
 /** Human-readable customization fields for a category ("No options" when none). */
 function customizationFields(slug: string): string {

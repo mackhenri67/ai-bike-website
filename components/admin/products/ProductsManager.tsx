@@ -172,26 +172,19 @@ export default function ProductsManager({
   ): ProductInput => {
     const images = [payload.thumbnail, ...payload.images].filter(Boolean);
     const variants = payload.variants.filter(
-      (variant) => variant.size || variant.color || variant.sku,
+      (variant) => Object.keys(variant.options).length > 0,
     );
     const variantStock = variants.reduce(
-      (sum, variant) => sum + (Math.floor(Number(variant.stock)) || 0),
+      (sum, variant) => sum + (variant.available ? (Math.floor(Number(variant.stock)) || 0) : 0),
       0,
     );
     const specsList = payload.specs
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
-    const customizationEntries = Object.entries(payload.customizationValues);
-    if (customizationEntries.length > 0) {
-      customizationEntries.forEach(([key, values]) => {
-        if (values.length > 0) {
-          specsList.push(`${key}: ${values.join(", ")}`);
-        }
-      });
-    }
     return {
       id: product?.id ?? null,
+      expected_stock: product?.stock,
       category_id: payload.categoryId || null,
       name: payload.name,
       slug: payload.slug || slugify(payload.name),
@@ -220,6 +213,9 @@ export default function ProductsManager({
       sort_order: 0,
       images: images.map((url) => ({ url, alt: null })),
       variants: variants.map((variant) => ({
+        id: variant.id,
+        expected_stock: variant.expectedStock,
+        options: variant.options,
         sku: variant.sku || null,
         size: variant.size || null,
         color: variant.color || null,

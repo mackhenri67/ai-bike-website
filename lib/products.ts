@@ -1,4 +1,6 @@
 import "server-only";
+import { legacyOptions } from "@/lib/product-options";
+import { getCategoryAxes } from "@/components/admin/products/categoryConfig";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,6 +32,8 @@ export type CatalogProduct = {
 export type CatalogProductDetail = {
   hasVariants: boolean;
   variants: {
+    options: Record<string, string>;
+    retired?: boolean;
     id: string;
     size: string | null;
     color: string | null;
@@ -203,7 +207,7 @@ export async function getCatalogProductBySlug(
        stock, is_featured, is_new_arrival,
        category:categories(name, slug, is_active),
        product_images(url, sort_order, is_primary),
-       product_variants(id,size,color,price,stock,available)`,
+       product_variants(id,size,color,options,retired,price,stock,available)`,
     )
     .eq("slug", slug)
     .eq("status", "active")
@@ -211,10 +215,10 @@ export async function getCatalogProductBySlug(
 
   if (error || !data) return null;
 
-  const hasVariants = (data.product_variants ?? []).length > 0;
+  const hasVariants = (data.product_variants ?? []).some((v) => !v.retired);
   const variants = (data.product_variants ?? [])
-    .filter((v) => v.available && Number(v.stock) > 0)
-    .map((v) => ({ ...v, price: Number(v.price), stock: Number(v.stock) }));
+    .filter((v) => !v.retired && v.available && Number(v.stock) > 0)
+    .map((v) => ({ ...v, options: legacyOptions(v), price: Number(v.price), stock: Number(v.stock) }));
   const images =
     (data.product_images ?? [])
       .slice()
@@ -244,7 +248,7 @@ export async function getCatalogProductBySlug(
     name: data.name,
     description: data.description,
     tagline: data.tagline ?? [],
-    specs: data.specs ?? [],
+    specs: (data.specs ?? []).filter((line: string) => !getCategoryAxes(asSingle(data.category)?.slug).some((axis) => line.split(":")[0].trim() === axis.flag)),
     price: variants.length
       ? Math.min(...variants.map((v) => v.price))
       : Number(data.price),

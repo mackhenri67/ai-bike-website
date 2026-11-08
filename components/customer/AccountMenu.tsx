@@ -196,7 +196,7 @@ export default function AccountMenu() {
           </li>
           <li className={styles.menuItem}>
             <Link
-              href="/profile"
+              href="/profile?tab=orders"
               className={styles.menuLink}
               role="menuitem"
               onClick={closeDropdown}

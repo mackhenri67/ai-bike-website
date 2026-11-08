@@ -1,4 +1,5 @@
 import "server-only";
+import { legacyOptions } from "@/lib/product-options";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
   missingServiceRoleMessage,
@@ -27,6 +28,8 @@ export type BuilderAxis = {
 };
 
 export type BuilderVariant = {
+  options?: Record<string, string>;
+  retired?: boolean;
   id: string;
   size: string | null;
   color: string | null;
@@ -115,7 +118,8 @@ function primaryImage(images: ImageRow[] | ImageRow | null): string | null {
 }
 
 function mapProduct(raw: BuilderProductRow): BuilderProduct {
-  const variants = (raw.product_variants ?? []).map((v) => ({
+  const variants = (raw.product_variants ?? []).filter((v) => !v.retired).map((v) => ({
+    options: legacyOptions(v),
     ...v,
     price: Number(v.price),
     stock: Number(v.stock),
@@ -210,7 +214,7 @@ export async function getBikeBuilderSteps(): Promise<
       .from("products")
       .select(
         "id, name, slug, description, specs, price, compare_at_price, stock, category_id," +
-          "product_images(url, sort_order, is_primary),product_variants(id,size,color,price,stock,available)",
+          "product_images(url, sort_order, is_primary),product_variants(id,size,color,options,retired,price,stock,available)",
       )
       .in("category_id", catIds)
       .eq("status", "active");

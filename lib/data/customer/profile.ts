@@ -11,7 +11,7 @@ const ORDER_SELECT = `
   payment_method, payment_status, status, payment_reference, notes,
   created_at, updated_at,
   order_items(id, product_id, product_variant_id, product_name, size, color,
-              unit_price, quantity, line_total)
+              unit_price, quantity, line_total, product:products(product_images(url,is_primary,sort_order)))
 `;
 
 export type CustomerProfile = {
@@ -52,5 +52,5 @@ export async function listCustomerOrders(
     .order("created_at", { ascending: false });
 
   if (error || !data) return null;
-  return data as OrderRow[];
+  return data as unknown as OrderRow[];
 }

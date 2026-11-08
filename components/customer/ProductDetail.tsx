@@ -1,5 +1,6 @@
 "use client";
 
+import { optionAxes, optionKey, optionLabel } from "@/lib/product-options";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,14 +31,8 @@ export default function ProductDetail({
     product.images.length > 0 ? product.images : [PRODUCT_PLACEHOLDER_SRC];
 
   const [activeImage, setActiveImage] = useState(images[0]);
-  // Products without variants still go through the cart with neutral
-  // size/color values (the selects below are hidden when there are none).
-  const [size, setSize] = useState(
-    product.sizes.length > 0 ? product.sizes[0] : "One Size",
-  );
-  const [color, setColor] = useState(
-    product.colors.length > 0 ? product.colors[0] : "Default",
-  );
+  const [picks, setPicks] = useState<Record<string, string>>(product.variants[0]?.options ?? {});
+  const axes = optionAxes(product.variants);
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const addTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,17 +43,13 @@ export default function ProductDetail({
     };
   }, []);
 
-  const selectedVariant = product.variants.find(
-    (v) =>
-      (v.size ?? "") === (size === "One Size" ? "" : size) &&
-      (v.color ?? "") === (color === "Default" ? "" : color),
-  );
+  const selectedVariant = product.variants.find((row) => optionKey(row.options) === optionKey(picks));
   const unitPrice = selectedVariant?.price ?? product.price;
   const availableStock = selectedVariant
     ? Math.min(product.stock, selectedVariant.stock)
     : product.stock;
   const outOfStock =
-    !product.available || (product.hasVariants && !selectedVariant);
+    !product.available || availableStock <= 0 || quantity > availableStock || (product.hasVariants && !selectedVariant);
   const categoryHref = product.categorySlug
     ? `/products?category=${product.categorySlug}`
     : "/products";
@@ -69,13 +60,15 @@ export default function ProductDetail({
     price: unitPrice,
     variantId: selectedVariant?.id,
     image: images[0],
-    size,
-    color,
+    options: picks,
+    size: optionLabel(picks) || "One Size",
+    color: "",
     quantity,
     stock: availableStock,
   });
 
   const handleAddToCart = () => {
+    if (outOfStock) return;
     addItem(currentSelection());
     setJustAdded(true);
     if (addTimer.current) clearTimeout(addTimer.current);
@@ -83,6 +76,7 @@ export default function ProductDetail({
   };
 
   const handleBuyNow = () => {
+    if (outOfStock) return;
     addItem(currentSelection());
     // Straight to checkout — if the customer isn't signed in the checkout
     // page sends them to /login?next=/checkout, and the localStorage cart
@@ -182,57 +176,22 @@ export default function ProductDetail({
             )}
 
             <div className={styles.options}>
-              {product.sizes.length > 0 && (
-                <div className={styles.option}>
-                  <label className={styles.optionLabel} htmlFor="product-size">
-                    Size
-                  </label>
-                  <div className={styles.selectWrap}>
-                    <select
-                      id="product-size"
-                      className={styles.select}
-                      value={size}
-                      onChange={(event) => {
-                        setSize(event.target.value);
-                        setQuantity(1);
-                      }}
-                    >
-                      {product.sizes.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownIcon size={14} className={styles.selectIcon} />
-                  </div>
+              {axes.map((axis, axisIndex) => <div key={axis.label} className={styles.option}>
+                <label className={styles.optionLabel} htmlFor={`option-${axisIndex}`}>{axis.label}</label>
+                <div className={styles.selectWrap}>
+                  <select id={`option-${axisIndex}`} className={styles.select} value={picks[axis.label] ?? ""} onChange={(event) => {
+                    const prefix = Object.fromEntries(axes.slice(0, axisIndex).map((a) => [a.label, picks[a.label]]));
+                    const candidate = product.variants.find((row) => row.options[axis.label] === event.target.value && Object.entries(prefix).every(([key, value]) => row.options[key] === value));
+                    if (candidate) setPicks(candidate.options);
+                    setQuantity(1);
+                  }}>
+                    {axis.options.map((value) => {
+                      const allowed = product.variants.some((row) => row.options[axis.label] === value && axes.slice(0, axisIndex).every((a) => row.options[a.label] === picks[a.label]));
+                      return <option key={value} value={value} disabled={!allowed}>{value}{allowed ? "" : " — unavailable"}</option>;
+                    })}
+                  </select><ChevronDownIcon size={14} className={styles.selectIcon} />
                 </div>
-              )}
-
-              {product.colors.length > 0 && (
-                <div className={styles.option}>
-                  <label className={styles.optionLabel} htmlFor="product-color">
-                    Color
-                  </label>
-                  <div className={styles.selectWrap}>
-                    <select
-                      id="product-color"
-                      className={styles.select}
-                      value={color}
-                      onChange={(event) => {
-                        setColor(event.target.value);
-                        setQuantity(1);
-                      }}
-                    >
-                      {product.colors.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownIcon size={14} className={styles.selectIcon} />
-                  </div>
-                </div>
-              )}
+              </div>)}
 
               <div className={styles.option}>
                 <span className={styles.optionLabel}>Quantity</span>

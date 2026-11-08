@@ -1,4 +1,5 @@
 "use client";
+import { legacyOptions } from "@/lib/product-options";
 import { builderAxes, builderVariant } from "@/lib/builder-options";
 
 import Image from "next/image";
@@ -127,6 +128,8 @@ export default function CustomBikeBuilder({
       for (const axis of builderAxes(step, firstInStock)) {
         if (axis.options.length > 0) values[axis.label] = axis.options[0];
       }
+      const firstChoice = firstInStock.variants?.find((v) => v.available && v.stock > 0);
+      if (firstChoice) Object.assign(values, legacyOptions(firstChoice));
       initial[step.stepNumber] = {
         product: (() => {
           const v = builderVariant(firstInStock, values);
@@ -159,29 +162,14 @@ export default function CustomBikeBuilder({
     setSelections((previous) => {
       const selection = previous[stepNumber];
       if (!selection) return previous;
-      return {
-        ...previous,
-        [stepNumber]: {
-          ...selection,
-          axisValues: { ...selection.axisValues, [label]: value },
-          product: (() => {
-            const v = builderVariant(selection.product, {
-              ...selection.axisValues,
-              [label]: value,
-            });
-            return v
-              ? {
-                  ...selection.product,
-                  price: v.price,
-                  stock: Math.min(
-                    selection.product.catalogueStock ?? selection.product.stock,
-                    v.stock,
-                  ),
-                }
-              : selection.product;
-          })(),
-        },
-      };
+      const step = orderedSteps.find((item) => item.stepNumber === stepNumber)!;
+      const axes = builderAxes(step, selection.product);
+      const index = axes.findIndex((axis) => axis.label === label);
+      const candidate = selection.product.variants?.find((row) => row.available && row.stock > 0 && legacyOptions(row)[label] === value && axes.slice(0, index).every((axis) => legacyOptions(row)[axis.label] === selection.axisValues[axis.label]));
+      const picks = candidate ? legacyOptions(candidate) : { ...selection.axisValues, [label]: value };
+      const v = builderVariant(selection.product, picks);
+      return { ...previous, [stepNumber]: { ...selection, axisValues: picks, product: v ? { ...selection.product, price: v.price, stock: Math.min(selection.product.catalogueStock ?? selection.product.stock, v.stock) } : selection.product } };
+
     });
   };
 
@@ -549,12 +537,14 @@ export default function CustomBikeBuilder({
           );
 
     const chooseProduct = (product: BuilderProduct) => {
+      const first = product.variants?.find((row) => row.available && row.stock > 0);
+      if (first) product = { ...product, price: first.price, stock: Math.min(product.catalogueStock ?? product.stock, first.stock) };
       setAiExplanation("");
       setSelections((prev) => ({
         ...prev,
         [step.stepNumber]: {
           product,
-          axisValues: prev[step.stepNumber]?.axisValues ?? {},
+          axisValues: product.variants?.find((v) => v.available && v.stock > 0) ? legacyOptions(product.variants.find((v) => v.available && v.stock > 0)!) : {},
         },
       }));
     };
@@ -661,7 +651,7 @@ export default function CustomBikeBuilder({
             <div className={styles.optionsCard}>
               <h2 className={styles.optionsTitle}>Customize this part</h2>
               <div className={styles.axisGrid}>
-                {builderAxes(step, selection?.product).map((axis) => {
+                {builderAxes(step, selection?.product).map((axis, axisIndex) => {
                   const current = selection?.axisValues[axis.label] ?? "";
                   return (
                     <label key={axis.label} className={styles.axisField}>
@@ -683,7 +673,7 @@ export default function CustomBikeBuilder({
                           Choose {axis.label.toLowerCase()}
                         </option>
                         {axis.options.map((option) => (
-                          <option key={option} value={option}>
+                          <option key={option} value={option} disabled={Boolean(selection?.product.variants?.length) && !selection?.product.variants?.some((row) => row.available && row.stock > 0 && legacyOptions(row)[axis.label] === option && builderAxes(step, selection.product).slice(0, axisIndex).every((a) => legacyOptions(row)[a.label] === selection.axisValues[a.label]))}>
                             {option}
                           </option>
                         ))}
@@ -859,7 +849,7 @@ export default function CustomBikeBuilder({
                     <div className={styles.reviewOptions}>
                       {builderAxes(step, selection?.product)
                         .filter((axis) => axis.options.length > 0)
-                        .map((axis) => (
+                        .map((axis, axisIndex) => (
                           <label
                             key={axis.label}
                             className={styles.reviewOption}
@@ -884,7 +874,7 @@ export default function CustomBikeBuilder({
                                 Choose {axis.label.toLowerCase()}
                               </option>
                               {axis.options.map((option) => (
-                                <option key={option} value={option}>
+                                <option key={option} value={option} disabled={Boolean(selection?.product.variants?.length) && !selection?.product.variants?.some((row) => row.available && row.stock > 0 && legacyOptions(row)[axis.label] === option && builderAxes(step, selection.product).slice(0, axisIndex).every((a) => legacyOptions(row)[a.label] === selection.axisValues[a.label]))}>
                                   {option}
                                 </option>
                               ))}

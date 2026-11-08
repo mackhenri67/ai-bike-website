@@ -6,6 +6,7 @@ import StoreSection from "@/components/customer/StoreSection";
 import CustomBikeSection from "@/components/customer/CustomBikeSection";
 import CustomerFooter from "@/components/customer/CustomerFooter";
 import { getCatalogProducts } from "@/lib/products";
+import { isPartProduct } from "@/lib/catalog-groups";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -23,11 +24,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [newArrivals, parts, accessories] = await Promise.all([
-    getCatalogProducts({ newArrivalsOnly: true }),
-    getCatalogProducts({ categorySlug: "parts" }),
-    getCatalogProducts({ categorySlug: "accessories" }),
-  ]);
+  const catalogue = await getCatalogProducts({});
+  const available = (catalogue ?? []).filter((product) => product.stock > 0);
+  const newArrivals = available.filter((product) => product.isNewArrival).slice(0, 4);
+  const parts = available.filter(isPartProduct).slice(0, 4);
+  const accessories = available.filter((product) => product.categorySlug === "accessories").slice(0, 4);
 
   return (
     <div className={styles.page}>

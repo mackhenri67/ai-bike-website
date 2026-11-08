@@ -28,7 +28,7 @@ const REGISTRATION_SELECT = `
 `;
 
 /** Public storefront list — only published events, soonest first. */
-export async function listPublishedEvents(): Promise<QueryResult<EventRow[]>> {
+export async function listPublishedEvents(upcomingOnly = false): Promise<QueryResult<EventRow[]>> {
   const supabase = await createClient();
   if (!supabase) return { data: null, error: null };
 
@@ -39,7 +39,9 @@ export async function listPublishedEvents(): Promise<QueryResult<EventRow[]>> {
     .order("event_date", { ascending: true });
 
   if (error) return { data: null, error: toFriendlyDbError(error) };
-  return { data: (data as EventRow[]) ?? [], error: null };
+  const now = Date.now();
+  const events = ((data as EventRow[]) ?? []).filter((event) => !upcomingOnly || new Date(event.end_date ?? event.event_date).getTime() >= now);
+  return { data: events, error: null };
 }
 
 /** Public storefront detail — only when the event is published. */

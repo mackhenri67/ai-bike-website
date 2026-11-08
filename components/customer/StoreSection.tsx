@@ -36,7 +36,7 @@ export default function StoreSection() {
             src={MAP_SRC}
             alt={`Map showing the location of ${STORE_INFO.name}`}
             fill
-            sizes="(max-width: 640px) 100vw, 380px"
+            sizes="(max-width: 900px) 90vw, 720px"
             className={styles.mapImage}
           />
         </div>
