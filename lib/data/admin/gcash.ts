@@ -1,9 +1,6 @@
 import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
-import {
-  type GcashSettingsRow,
-  type QueryResult,
-} from "@/lib/data/types";
+import { type GcashSettingsRow, type QueryResult } from "@/lib/data/types";
 import { missingServiceRoleMessage, toFriendlyDbError } from "./errors";
 
 /**
@@ -34,7 +31,7 @@ export type UpdateGcashSettingsInput = {
 };
 
 export async function updateGcashSettings(
-  input: UpdateGcashSettingsInput
+  input: UpdateGcashSettingsInput,
 ): Promise<QueryResult<null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
@@ -72,50 +69,16 @@ export type ReviewGcashPaymentInput = {
  * to the order status history audit trail.
  */
 export async function reviewGcashPayment(
-  input: ReviewGcashPaymentInput
+  input: ReviewGcashPaymentInput,
 ): Promise<QueryResult<null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
 
-  const now = new Date().toISOString();
-  const note =
-    input.decision === "paid"
-      ? "GCash payment verified by admin"
-      : input.reason?.trim() || "GCash payment rejected by admin";
-
-  const { error: paymentError } = await admin
-    .from("gcash_payments")
-    .update({
-      status: input.decision,
-      rejection_reason:
-        input.decision === "rejected" ? input.reason?.trim() || null : null,
-      reviewed_at: now,
-      reviewed_by: input.reviewerId,
-    })
-    .eq("order_id", input.orderId);
-  if (paymentError) return { data: null, error: toFriendlyDbError(paymentError) };
-
-  const orderUpdate: {
-    payment_status: string;
-    status?: string;
-  } = { payment_status: input.decision };
-  if (input.decision === "paid") orderUpdate.status = "shipping";
-
-  const { error: orderError } = await admin
-    .from("orders")
-    .update(orderUpdate)
-    .eq("id", input.orderId);
-  if (orderError) return { data: null, error: toFriendlyDbError(orderError) };
-
-  const { error: historyError } = await admin
-    .from("order_status_history")
-    .insert({
-      order_id: input.orderId,
-      status: input.decision === "paid" ? "shipping" : "pending",
-      note,
-      created_by: input.reviewerId,
-    });
-  if (historyError) return { data: null, error: toFriendlyDbError(historyError) };
-
-  return { data: null, error: null };
+  const { error } = await admin.rpc("lnr_review_order_payment", {
+    p_order: input.orderId,
+    p_decision: input.decision,
+    p_admin: input.reviewerId,
+    p_reason: input.reason ?? null,
+  });
+  return { data: null, error: error ? toFriendlyDbError(error) : null };
 }

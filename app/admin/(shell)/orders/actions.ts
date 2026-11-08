@@ -1,12 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { getUser } from "@/lib/supabase/server";
-import {
-  listNewOrderIds,
-  updateOrderStatus,
-} from "@/lib/data/admin/orders";
+import { requireAdmin } from "@/lib/auth/guards";
+import { listNewOrderIds, updateOrderStatus } from "@/lib/data/admin/orders";
 import { reviewGcashPayment } from "@/lib/data/admin/gcash";
 import type { OrderStatus } from "@/lib/data/types";
 
@@ -17,15 +13,9 @@ const VALID_STATUSES: OrderStatus[] = [
   "cancelled",
 ];
 
-async function requireAdmin() {
-  const user = await getUser();
-  if (!user) redirect("/admin/login");
-  return user;
-}
-
 export async function updateOrderStatusAction(
   orderId: string,
-  status: OrderStatus
+  status: OrderStatus,
 ): Promise<{ error: string | null }> {
   const user = await requireAdmin();
 
@@ -36,6 +26,11 @@ export async function updateOrderStatusAction(
   const result = await updateOrderStatus(orderId, status, user.id, null);
   if (result.error) return { error: result.error };
 
+  revalidatePath("/products");
+  revalidatePath("/products/[slug]", "page");
+  revalidatePath("/custom-bike-builder");
+  revalidatePath("/profile");
+  revalidatePath("/");
   revalidatePath("/admin/orders");
   revalidatePath("/admin/dashboard");
 
@@ -71,7 +66,7 @@ export async function getNewOrderIds(): Promise<{
 export async function reviewGcashPaymentAction(
   orderId: string,
   decision: ReviewGcashDecision,
-  reason?: string | null
+  reason?: string | null,
 ): Promise<{ error: string | null }> {
   const user = await requireAdmin();
 

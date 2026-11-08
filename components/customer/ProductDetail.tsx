@@ -33,10 +33,10 @@ export default function ProductDetail({
   // Products without variants still go through the cart with neutral
   // size/color values (the selects below are hidden when there are none).
   const [size, setSize] = useState(
-    product.sizes.length > 0 ? product.sizes[0] : "One Size"
+    product.sizes.length > 0 ? product.sizes[0] : "One Size",
   );
   const [color, setColor] = useState(
-    product.colors.length > 0 ? product.colors[0] : "Default"
+    product.colors.length > 0 ? product.colors[0] : "Default",
   );
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
@@ -48,7 +48,17 @@ export default function ProductDetail({
     };
   }, []);
 
-  const outOfStock = !product.available;
+  const selectedVariant = product.variants.find(
+    (v) =>
+      (v.size ?? "") === (size === "One Size" ? "" : size) &&
+      (v.color ?? "") === (color === "Default" ? "" : color),
+  );
+  const unitPrice = selectedVariant?.price ?? product.price;
+  const availableStock = selectedVariant
+    ? Math.min(product.stock, selectedVariant.stock)
+    : product.stock;
+  const outOfStock =
+    !product.available || (product.hasVariants && !selectedVariant);
   const categoryHref = product.categorySlug
     ? `/products?category=${product.categorySlug}`
     : "/products";
@@ -56,12 +66,13 @@ export default function ProductDetail({
   const currentSelection = () => ({
     productId: product.id,
     name: product.name,
-    price: product.price,
+    price: unitPrice,
+    variantId: selectedVariant?.id,
     image: images[0],
     size,
     color,
     quantity,
-    stock: product.stock,
+    stock: availableStock,
   });
 
   const handleAddToCart = () => {
@@ -144,10 +155,10 @@ export default function ProductDetail({
           {/* Product information */}
           <div className={styles.info}>
             <h1 className={styles.name}>{product.name}</h1>
-            <p className={styles.price}>{formatCurrency(product.price)}</p>
+            <p className={styles.price}>{formatCurrency(unitPrice)}</p>
 
             <p className={outOfStock ? styles.stockOut : styles.stock}>
-              {outOfStock ? "Out of stock" : `${product.stock} in stock`}
+              {outOfStock ? "Out of stock" : `${availableStock} in stock`}
             </p>
 
             {(product.description || product.tagline.length > 0) && (
@@ -181,7 +192,10 @@ export default function ProductDetail({
                       id="product-size"
                       className={styles.select}
                       value={size}
-                      onChange={(event) => setSize(event.target.value)}
+                      onChange={(event) => {
+                        setSize(event.target.value);
+                        setQuantity(1);
+                      }}
                     >
                       {product.sizes.map((option) => (
                         <option key={option} value={option}>
@@ -204,7 +218,10 @@ export default function ProductDetail({
                       id="product-color"
                       className={styles.select}
                       value={color}
-                      onChange={(event) => setColor(event.target.value)}
+                      onChange={(event) => {
+                        setColor(event.target.value);
+                        setQuantity(1);
+                      }}
                     >
                       {product.colors.map((option) => (
                         <option key={option} value={option}>
@@ -237,7 +254,7 @@ export default function ProductDetail({
                     type="button"
                     className={styles.qtyBtn}
                     onClick={() => setQuantity((current) => current + 1)}
-                    disabled={product.stock > 0 && quantity >= product.stock}
+                    disabled={product.stock > 0 && quantity >= availableStock}
                     aria-label="Increase quantity"
                   >
                     +

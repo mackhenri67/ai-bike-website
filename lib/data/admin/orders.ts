@@ -1,4 +1,5 @@
 import "server-only";
+import { paymentProofUrl } from "@/lib/storage/proofs";
 import { getAdminClient } from "@/lib/supabase/admin";
 import {
   type OrderRow,
@@ -49,11 +50,38 @@ export async function listOrders(): Promise<QueryResult<OrderRow[]>> {
       .select(ORDER_SELECT_BASE)
       .order("created_at", { ascending: false });
 
-    if (fallbackError) return { data: null, error: toFriendlyDbError(fallbackError) };
+    if (fallbackError)
+      return { data: null, error: toFriendlyDbError(fallbackError) };
     return { data: (fallback as OrderRow[]) ?? [], error: null };
   }
 
-  return { data: (data as OrderRow[]) ?? [], error: null };
+  return {
+    data: await Promise.all(
+      ((data as OrderRow[]) ?? []).map(async (order) => {
+        const payments = order.gcash_payments;
+        if (Array.isArray(payments))
+          return {
+            ...order,
+            gcash_payments: await Promise.all(
+              payments.map(async (p) => ({
+                ...p,
+                screenshot_url: await paymentProofUrl(p.screenshot_url),
+              })),
+            ),
+          };
+        if (payments)
+          return {
+            ...order,
+            gcash_payments: {
+              ...payments,
+              screenshot_url: await paymentProofUrl(payments.screenshot_url),
+            },
+          };
+        return order;
+      }),
+    ),
+    error: null,
+  };
 }
 
 /**
@@ -91,26 +119,16 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
   createdBy: string | null,
-  note: string | null
+  note: string | null,
 ): Promise<QueryResult<null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
 
-  const { error } = await admin
-    .from("orders")
-    .update({ status })
-    .eq("id", orderId);
-  if (error) return { data: null, error: toFriendlyDbError(error) };
-
-  const { error: historyError } = await admin
-    .from("order_status_history")
-    .insert({
-      order_id: orderId,
-      status,
-      note: note?.trim() || null,
-      created_by: createdBy,
-    });
-  if (historyError) return { data: null, error: toFriendlyDbError(historyError) };
-
-  return { data: null, error: null };
+  const { error } = await admin.rpc("lnr_set_order_status", {
+    p_order: orderId,
+    p_status: status,
+    p_admin: createdBy,
+    p_note: note,
+  });
+  return { data: null, error: error ? toFriendlyDbError(error) : null };
 }

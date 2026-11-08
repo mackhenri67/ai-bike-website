@@ -24,6 +24,9 @@ export type CustomerLocationInput = {
 /** A single line on the checkout page before it becomes an order row. */
 export type CheckoutLineInput = {
   productId: string;
+  variantId?: string;
+  options?: Record<string, string>;
+  builderStepNumber?: number;
   /** Product slug, used as a fallback lookup when `productId` is missing. */
   slug?: string;
   name: string;

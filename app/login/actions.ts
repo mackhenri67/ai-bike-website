@@ -1,5 +1,6 @@
 "use server";
 
+import { isAdmin } from "@/lib/auth/roles";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { sanitizeNext } from "@/lib/navigation";
@@ -27,9 +28,11 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export async function customerLogin(
   prevState: LoginState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") ?? "");
   // Direct /login visits default to the profile; the cart/checkout flow
   // always passes ?next=/checkout explicitly.
@@ -53,7 +56,11 @@ export async function customerLogin(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    console.error("[auth] customer signInWithPassword failed:", error.code, error.message);
+    console.error(
+      "[auth] customer signInWithPassword failed:",
+      error.code,
+      error.message,
+    );
 
     if (
       error.code === "email_not_confirmed" ||
@@ -72,9 +79,19 @@ export async function customerLogin(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "We couldn't load your account after signing in. Please try again." };
+    return {
+      error:
+        "We couldn't load your account after signing in. Please try again.",
+    };
   }
 
+  if (isAdmin(user)) {
+    await supabase.auth.signOut({ scope: "local" });
+    return {
+      error:
+        "This is an administrator account. Use /admin/login or a separate customer account.",
+    };
+  }
   const customer = await getOrCreateCustomer(user);
   const location = customer
     ? await getCustomerDefaultLocation(customer.id)
@@ -94,9 +111,11 @@ export async function customerLogin(
  */
 export async function customerForgotPassword(
   prevState: ForgotState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<ForgotState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
 
   if (!EMAIL_PATTERN.test(email)) {
     return {
@@ -119,7 +138,11 @@ export async function customerForgotPassword(
   });
 
   if (error) {
-    console.error("[auth] customer resetPasswordForEmail failed:", error.code, error.message);
+    console.error(
+      "[auth] customer resetPasswordForEmail failed:",
+      error.code,
+      error.message,
+    );
     return {
       status: "error",
       message:

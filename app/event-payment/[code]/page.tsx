@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { requireCustomer } from "@/lib/auth/guards";
 import { redirect, notFound } from "next/navigation";
 import { getGcashSettings } from "@/lib/data/admin/gcash";
 import { getEventRegistrationByCode } from "@/lib/data/customer/events";
@@ -21,6 +22,9 @@ export default async function EventPaymentPage({
 }) {
   const { code } = await params;
   const registrationCode = decodeURIComponent(code);
+  await requireCustomer(
+    `/login?next=${encodeURIComponent(`/event-payment/${registrationCode}`)}`,
+  );
 
   const regResult = await getEventRegistrationByCode(registrationCode);
   const registration = regResult.data;
@@ -41,6 +45,10 @@ export default async function EventPaymentPage({
       <main className={styles.page}>
         <div className={styles.container}>
           <EventPaymentView
+            paymentStatus={registration.payment_status}
+            submittedProof={registration.proof_screenshot_url}
+            rejectionReason={registration.rejection_reason}
+            paymentReference={registration.reference_number}
             registrationCode={registration.registration_code}
             eventTitle={registration.event?.title ?? "Event registration"}
             amount={Number(registration.amount_paid) || 0}

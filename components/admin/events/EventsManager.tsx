@@ -4,8 +4,11 @@ import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getBrowserClient } from "@/lib/supabase/client";
-import { deleteEventAction, saveEventAction } from "@/app/admin/(shell)/events/actions";
+import { getAdminBrowserClient } from "@/lib/supabase/client";
+import {
+  deleteEventAction,
+  saveEventAction,
+} from "@/app/admin/(shell)/events/actions";
 import type { EventInput, EventRow, EventStatus } from "@/lib/data/types";
 import styles from "./EventsManager.module.css";
 import { CloseIcon, ImageIcon, PencilIcon, PlusIcon, TrashIcon } from "./icons";
@@ -80,7 +83,7 @@ export default function EventsManager({
   error: initialError,
 }: EventsManagerProps) {
   const [deletedEventIds, setDeletedEventIds] = useState<ReadonlySet<string>>(
-    () => new Set()
+    () => new Set(),
   );
   const [modal, setModal] = useState<ModalState>(null);
   const [pendingDelete, setPendingDelete] = useState<EventRow | null>(null);
@@ -101,11 +104,13 @@ export default function EventsManager({
       initialEvents
         .filter((event) => !deletedEventIds.has(event.id))
         .sort((a, b) => a.event_date.localeCompare(b.event_date)),
-    [initialEvents, deletedEventIds]
+    [initialEvents, deletedEventIds],
   );
 
-  const updateField = <K extends keyof EventForm>(key: K, value: EventForm[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const updateField = <K extends keyof EventForm>(
+    key: K,
+    value: EventForm[K],
+  ) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleTitleChange = (value: string) => {
     setForm((prev) => ({
@@ -153,15 +158,15 @@ export default function EventsManager({
     setUploading(true);
     setFormError(null);
     try {
-      const supabase = getBrowserClient();
+      const supabase = getAdminBrowserClient();
       const path = `events/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
       const { error: uploadError } = await supabase.storage
-        .from("events")
+        .from("images")
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
       const {
         data: { publicUrl },
-      } = supabase.storage.from("events").getPublicUrl(path);
+      } = supabase.storage.from("images").getPublicUrl(path);
       updateField("bannerImageUrl", publicUrl);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Upload failed");
@@ -263,8 +268,12 @@ export default function EventsManager({
                     </span>
                   </td>
                   <td className={styles.td}>
-                    <span className={styles.signupCount}>{event.slots_booked}</span>
-                    <span className={styles.signupTotal}>/{event.capacity}</span>
+                    <span className={styles.signupCount}>
+                      {event.slots_booked}
+                    </span>
+                    <span className={styles.signupTotal}>
+                      /{event.capacity}
+                    </span>
                   </td>
                   <td className={styles.td}>
                     {event.price > 0 ? formatPeso(event.price) : "Free"}
@@ -514,9 +523,7 @@ export default function EventsManager({
       {pendingDelete ? (
         <div className={styles.overlay} role="dialog" aria-modal="true">
           <div className={styles.modal}>
-            <h2 className={styles.modalTitle}>
-              Delete {pendingDelete.title}?
-            </h2>
+            <h2 className={styles.modalTitle}>Delete {pendingDelete.title}?</h2>
             <p className={styles.modalDescription}>
               This removes the event from the public site and deletes its rider
               sign ups. Refunds must be issued in GCash separately.

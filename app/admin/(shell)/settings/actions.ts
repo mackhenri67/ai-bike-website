@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { getUser } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/guards";
 import { updateGcashSettings } from "@/lib/data/admin/gcash";
 
 export type SaveGcashSettingsState = {
@@ -20,10 +19,9 @@ const PHONE_RE = /^(\+?63|0)9\d{9}$/;
  */
 export async function saveGcashSettingsAction(
   prevState: SaveGcashSettingsState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<SaveGcashSettingsState> {
-  const user = await getUser();
-  if (!user) redirect("/admin/login");
+  await requireAdmin();
 
   const qrCodeUrl = String(formData.get("qr_code_url") ?? "").trim();
   const gcashNumber = String(formData.get("gcash_number") ?? "").trim();
@@ -33,18 +31,20 @@ export async function saveGcashSettingsAction(
   }
   if (!PHONE_RE.test(gcashNumber.replace(/[\s\-()]/g, ""))) {
     return {
-      error: "Please enter a valid Philippine mobile number (e.g. 0917 123 4567).",
+      error:
+        "Please enter a valid Philippine mobile number (e.g. 0917 123 4567).",
       saved: false,
     };
   }
 
   if (qrCodeUrl) {
-    const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
+    const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(
+      /\/+$/,
+      "",
+    );
     if (
       !storageUrl ||
-      !qrCodeUrl.startsWith(
-        `${storageUrl}/storage/v1/object/public/images/`
-      )
+      !qrCodeUrl.startsWith(`${storageUrl}/storage/v1/object/public/images/`)
     ) {
       return {
         error: "The QR code image is not valid. Please upload it again.",

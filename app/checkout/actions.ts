@@ -20,11 +20,13 @@ export type PlaceOrderState = {
  */
 export async function placeOrder(
   prevState: PlaceOrderState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<PlaceOrderState> {
   const supabase = await createClient();
   if (!supabase) {
-    return { error: "Supabase is not configured. Please refresh and try again." };
+    return {
+      error: "Supabase is not configured. Please refresh and try again.",
+    };
   }
 
   const {
@@ -36,12 +38,17 @@ export async function placeOrder(
 
   const customer = await getOrCreateCustomer(user);
   if (!customer) {
-    return { error: "We couldn't load your customer account. Please try again." };
+    return {
+      error: "We couldn't load your customer account. Please try again.",
+    };
   }
 
   const location = await getCustomerDefaultLocation(customer.id);
   if (!location) {
-    return { error: "You need a saved delivery location before you can check out. Please set one and come back." };
+    return {
+      error:
+        "You need a saved delivery location before you can check out. Please set one and come back.",
+    };
   }
 
   const paymentMethod = String(formData.get("payment_method") ?? "cod");
@@ -52,11 +59,26 @@ export async function placeOrder(
   let items: CheckoutLineInput[];
   try {
     const raw = JSON.parse(String(formData.get("items") ?? "")) as unknown;
-    if (!Array.isArray(raw)) throw new Error("items must be an array");
+    if (!Array.isArray(raw) || raw.length > 100)
+      throw new Error("items must be an array");
     items = raw.map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry))
+        throw new Error("Invalid cart line");
       const line = entry as Record<string, unknown>;
       return {
         productId: String(line.productId ?? ""),
+        variantId:
+          typeof line.variantId === "string" ? line.variantId : undefined,
+        options:
+          line.options &&
+          typeof line.options === "object" &&
+          !Array.isArray(line.options)
+            ? (line.options as Record<string, string>)
+            : undefined,
+        builderStepNumber:
+          typeof line.builderStepNumber === "number"
+            ? line.builderStepNumber
+            : undefined,
         slug: line.slug ? String(line.slug) : undefined,
         name: String(line.name ?? "Product"),
         price: Number(line.price ?? 0),
@@ -66,7 +88,10 @@ export async function placeOrder(
       };
     });
   } catch {
-    return { error: "Your cart could not be read. Please go back to your cart and try again." };
+    return {
+      error:
+        "Your cart could not be read. Please go back to your cart and try again.",
+    };
   }
 
   if (items.length === 0) {
@@ -84,7 +109,11 @@ export async function placeOrder(
   });
 
   if (result.error || !result.data) {
-    return { error: result.error ?? "Something went wrong while placing your order. Please try again." };
+    return {
+      error:
+        result.error ??
+        "Something went wrong while placing your order. Please try again.",
+    };
   }
 
   if (result.data.paymentMethod === "gcash") {
@@ -92,11 +121,11 @@ export async function placeOrder(
     // scans the merchant QR code and submits their payment proof. `placed=1`
     // tells that page the order was just created so it can clear the cart.
     redirect(
-      `/gcash-payment/${encodeURIComponent(result.data.orderNumber)}?placed=1`
+      `/gcash-payment/${encodeURIComponent(result.data.orderNumber)}?placed=1`,
     );
   }
 
   redirect(
-    `/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}`
+    `/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}`,
   );
 }

@@ -1,5 +1,7 @@
 "use client";
+import { exchangeRecoveryCode } from "@/lib/auth/recovery";
 
+import { isAdmin } from "@/lib/auth/roles";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getBrowserClient } from "@/lib/supabase/client";
@@ -18,7 +20,7 @@ function ResetPasswordFormInner() {
   const code = searchParams.get("code");
 
   const [stage, setStage] = useState<Stage>(
-    code ? { name: "loading" } : { name: "invalid" }
+    code ? { name: "loading" } : { name: "invalid" },
   );
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -32,12 +34,13 @@ function ResetPasswordFormInner() {
       return;
     }
 
+    const recoveryCode = code;
     let cancelled = false;
 
     async function exchange() {
       try {
         const client = getBrowserClient();
-        const { error } = await client.auth.exchangeCodeForSession(code);
+        const { error } = await exchangeRecoveryCode("customer", recoveryCode);
         if (cancelled) return;
 
         if (error) {
@@ -45,6 +48,19 @@ function ResetPasswordFormInner() {
           return;
         }
 
+        const {
+          data: { user },
+        } = await client.auth.getUser();
+        if (cancelled) return;
+        if (!user || isAdmin(user)) {
+          if (user) await client.auth.signOut({ scope: "local" });
+          setStage({
+            name: "error",
+            message:
+              "Use the administrator password reset for an administrator account.",
+          });
+          return;
+        }
         setStage({ name: "ready" });
       } catch (err) {
         if (cancelled) return;
@@ -86,7 +102,7 @@ function ResetPasswordFormInner() {
 
       if (error) {
         setFormError(
-          "We couldn't update the password. Your reset link may have expired — request a new one."
+          "We couldn't update the password. Your reset link may have expired — request a new one.",
         );
         return;
       }
@@ -96,7 +112,7 @@ function ResetPasswordFormInner() {
       setFormError(
         err instanceof Error
           ? err.message
-          : "Something went wrong while updating your password."
+          : "Something went wrong while updating your password.",
       );
     } finally {
       setSubmitting(false);

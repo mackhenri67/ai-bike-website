@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Open_Sans, Inter, Archivo, Instrument_Sans } from "next/font/google";
 import { CartProvider } from "@/components/customer/CartContext";
+import { getHomepageBanners } from "@/lib/data/banners";
 import { ShopProvider } from "@/components/customer/ShopContext";
 import "./globals.css";
 
@@ -39,17 +40,18 @@ const instrumentSans = Instrument_Sans({
 export const metadata: Metadata = {
   title: "LnR Cycle Center",
   description:
-    "LnR Cycle Center — motorcycle repair, parts and servicing. Administrator panel and booking system.",
+    "LnR Cycle Center — bicycle parts, custom bike builds and cycling event registration.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const banners = await getHomepageBanners();
   return (
     <html
       lang="en"
       className={`${openSans.variable} ${inter.variable} ${archivo.variable} ${instrumentSans.variable}`}
     >
       <body>
-        <ShopProvider>
+        <ShopProvider banners={banners}>
           <CartProvider>{children}</CartProvider>
         </ShopProvider>
       </body>

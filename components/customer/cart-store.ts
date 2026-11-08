@@ -8,6 +8,9 @@ export type CartItem = {
   /** Unique line key — product + size + color. */
   key: string;
   productId: string;
+  variantId?: string;
+  options?: Record<string, string>;
+  builderStepNumber?: number;
   name: string;
   price: number;
   image: string;
@@ -24,6 +27,9 @@ export type CartItem = {
 
 export type AddToCartInput = {
   productId: string;
+  variantId?: string;
+  options?: Record<string, string>;
+  builderStepNumber?: number;
   name: string;
   price: number;
   image: string;
@@ -51,7 +57,11 @@ export function formatCurrency(value: number): string {
   })}`;
 }
 
-export function lineKey(productId: string, size: string, color: string): string {
+export function lineKey(
+  productId: string,
+  size: string,
+  color: string,
+): string {
   return `${productId}::${size}::${color}`;
 }
 
@@ -76,9 +86,12 @@ export function selectedItemCount(items: CartItem[]): number {
   return count;
 }
 
-export function toggleItemSelection(items: CartItem[], key: string): CartItem[] {
+export function toggleItemSelection(
+  items: CartItem[],
+  key: string,
+): CartItem[] {
   return items.map((item) =>
-    item.key === key ? { ...item, selected: !item.selected } : item
+    item.key === key ? { ...item, selected: !item.selected } : item,
   );
 }
 
@@ -98,7 +111,7 @@ export function incrementQuantity(items: CartItem[], key: string): CartItem[] {
               ? item.quantity
               : item.quantity + 1,
         }
-      : item
+      : item,
   );
 }
 
@@ -106,7 +119,7 @@ export function decrementQuantity(items: CartItem[], key: string): CartItem[] {
   return items.map((item) =>
     item.key === key
       ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-      : item
+      : item,
   );
 }
 
@@ -118,7 +131,10 @@ export function removeItem(items: CartItem[], key: string): CartItem[] {
  * Adds a product line, merging into an existing line with the same
  * product + size + color so items are never duplicated.
  */
-export function addToCart(items: CartItem[], input: AddToCartInput): CartItem[] {
+export function addToCart(
+  items: CartItem[],
+  input: AddToCartInput,
+): CartItem[] {
   const key = lineKey(input.productId, input.size, input.color);
   const existingIndex = items.findIndex((item) => item.key === key);
   if (existingIndex === -1) {
@@ -127,6 +143,9 @@ export function addToCart(items: CartItem[], input: AddToCartInput): CartItem[] 
       {
         key,
         productId: input.productId,
+        variantId: input.variantId,
+        options: input.options,
+        builderStepNumber: input.builderStepNumber,
         name: input.name,
         price: input.price,
         image: input.image,
@@ -142,13 +161,18 @@ export function addToCart(items: CartItem[], input: AddToCartInput): CartItem[] 
     index === existingIndex
       ? {
           ...item,
-          // Never exceed the line's stock cap (when one is known).
+          price: input.price,
+          stock: input.stock,
+          variantId: input.variantId,
+          options: input.options,
+          builderStepNumber: input.builderStepNumber,
+          // Re-adding refreshes the line with the current catalogue values.
           quantity:
-            item.stock > 0 && item.quantity + input.quantity > item.stock
-              ? item.stock
+            input.stock > 0 && item.quantity + input.quantity > input.stock
+              ? input.stock
               : item.quantity + input.quantity,
           selected: true,
         }
-      : item
+      : item,
   );
 }

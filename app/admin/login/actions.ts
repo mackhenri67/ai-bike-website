@@ -1,7 +1,8 @@
 "use server";
 
+import { isAdmin } from "@/lib/auth/roles";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminSessionClient } from "@/lib/supabase/server";
 
 export type LoginState = {
   error: string | null;
@@ -21,9 +22,11 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export async function adminLogin(
   prevState: LoginState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") ?? "");
 
   if (!email || !password) {
@@ -34,7 +37,7 @@ export async function adminLogin(
     return { error: "Please enter a valid email address." };
   }
 
-  const supabase = await createClient();
+  const supabase = await createAdminSessionClient();
   if (!supabase) {
     return {
       error:
@@ -42,13 +45,20 @@ export async function adminLogin(
     };
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) {
     // Supabase intentionally returns a generic message for security.
     // Log the real reason server-side so it can be diagnosed, and surface
     // a targeted hint for the one case admins can act on directly.
-    console.error("[auth] signInWithPassword failed:", error.code, error.message);
+    console.error(
+      "[auth] signInWithPassword failed:",
+      error.code,
+      error.message,
+    );
 
     if (
       error.code === "email_not_confirmed" ||
@@ -66,6 +76,13 @@ export async function adminLogin(
     };
   }
 
+  if (!isAdmin(data.user)) {
+    await supabase.auth.signOut({ scope: "local" });
+    return {
+      error:
+        "This account does not have administrator access. Use the customer login.",
+    };
+  }
   redirect("/admin");
 }
 
@@ -75,9 +92,11 @@ export async function adminLogin(
  */
 export async function adminForgotPassword(
   prevState: ForgotState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<ForgotState> {
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
 
   if (!EMAIL_PATTERN.test(email)) {
     return {
@@ -86,7 +105,7 @@ export async function adminForgotPassword(
     };
   }
 
-  const supabase = await createClient();
+  const supabase = await createAdminSessionClient();
   if (!supabase) {
     return {
       status: "error",

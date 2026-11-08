@@ -46,12 +46,12 @@ export default function CheckoutView({
 
   const selectedItems = useMemo(
     () => items.filter((item) => item.selected),
-    [items]
+    [items],
   );
 
   const subtotal = useMemo(
     () => calculateSubtotal(selectedItems),
-    [selectedItems]
+    [selectedItems],
   );
   const total = useMemo(() => calculateTotal(subtotal), [subtotal]);
 
@@ -74,10 +74,13 @@ export default function CheckoutView({
       productId: item.productId,
       name: item.name,
       price: item.price,
+      variantId: item.variantId,
+      options: item.options,
+      builderStepNumber: item.builderStepNumber,
       size: item.size,
       color: item.color,
       quantity: item.quantity,
-    }))
+    })),
   );
 
   return (
@@ -117,7 +120,9 @@ export default function CheckoutView({
                   />
                   <span className={styles.paymentCopy}>
                     <span className={styles.paymentTitle}>{method.title}</span>
-                    <span className={styles.paymentDesc}>{method.description}</span>
+                    <span className={styles.paymentDesc}>
+                      {method.description}
+                    </span>
                   </span>
                 </label>
               );

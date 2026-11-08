@@ -1,107 +1,126 @@
 "use client";
-
 import { useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useShop } from "@/components/customer/ShopContext";
+import { getAdminBrowserClient } from "@/lib/supabase/client";
+import {
+  saveHomepageBanner,
+  removeHomepageBanner,
+} from "@/app/admin/(shell)/dashboard/banner-actions";
 import { ImagePlusIcon, Trash2Icon } from "@/components/admin/icons";
 import styles from "./BannersManager.module.css";
-
-/**
- * Admin manager for the homepage banner images. Uploaded files are read as
- * data URLs and pushed through the existing useShop() addBanners/removeBanner
- * API — no parallel state mechanism is introduced.
- */
 export default function BannersManager() {
-  const { banners, addBanners, removeBanner } = useShop();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [reading, setReading] = useState(false);
-
-  const handleUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    setReading(true);
-
-    const readers: Promise<string>[] = Array.from(files).map(
-      (file) =>
-        new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () =>
-            resolve(typeof reader.result === "string" ? reader.result : "");
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(file);
-        })
-    );
-
-    Promise.all(readers)
-      .then((urls) => {
-        addBanners(urls.filter(Boolean));
-      })
-      .catch({
-        // Non-fatal: failed reads simply don't add anything.
-      } as unknown as () => void)
-      .finally(() => {
-        setReading(false);
-        if (fileRef.current) fileRef.current.value = "";
-      });
-  };
-
+  const { banners } = useShop();
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function upload(event: ChangeEvent<HTMLInputElement>) {
+    const files = [...(event.target.files ?? [])];
+    if (!files.length || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      for (const file of files) {
+        if (
+          !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
+          file.size > 10 * 1024 * 1024
+        )
+          throw new Error("Use PNG, JPG or WebP images up to 10MB.");
+        const client = getAdminBrowserClient();
+        const extension =
+          file.type === "image/png"
+            ? "png"
+            : file.type === "image/webp"
+              ? "webp"
+              : "jpg";
+        const path = `banners/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await client.storage
+          .from("images")
+          .upload(path, file, { contentType: file.type, upsert: false });
+        if (uploadError)
+          throw new Error(
+            "Image upload failed. Confirm your administrator role and Storage policies.",
+          );
+        const { data } = client.storage.from("images").getPublicUrl(path);
+        const result = await saveHomepageBanner(data.publicUrl);
+        if (result.error) throw new Error(result.error);
+      }
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Banner upload failed.");
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  }
+  async function remove(url: string) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await removeHomepageBanner(url);
+      if (result.error) throw new Error(result.error);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Banner removal failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Homepage banner images</h1>
           <p className={styles.description}>
-            These rotate behind the headline on the storefront homepage. Upload
-            from this computer.
+            Upload images for the public storefront.
           </p>
         </div>
         <button
-          type="button"
           className={styles.uploadButton}
-          onClick={() => fileRef.current?.click()}
-          disabled={reading}
+          type="button"
+          disabled={busy}
+          onClick={() => input.current?.click()}
         >
           <ImagePlusIcon size={16} />
-          {reading ? "Reading…" : "Upload images"}
+          {busy ? "Saving…" : "Upload images"}
         </button>
         <input
-          ref={fileRef}
+          ref={input}
           type="file"
           accept="image/png,image/jpeg,image/webp"
           multiple
-          className={styles.hiddenFile}
-          onChange={handleUpload}
+          hidden
+          onChange={upload}
         />
       </div>
-
+      {error ? <p role="alert">{error}</p> : null}
       <div className={styles.card}>
-        {banners.length === 0 ? (
-          <div className={styles.empty}>
-            No banner images yet. The homepage hero will show a plain dark
-            background until you upload one.
-          </div>
-        ) : (
+        {banners.length ? (
           <div className={styles.grid}>
-            {banners.map((url, index) => (
-              <div key={url} className={styles.tile}>
+            {banners.map((url, i) => (
+              <div className={styles.tile} key={url}>
                 <div className={styles.imageWrap}>
                   <div className={styles.imageInner}>
                     <Image
                       src={url}
-                      alt={`Banner ${index + 1}`}
+                      alt={`Homepage banner ${i + 1}`}
                       fill
-                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                      sizes="(min-width:1024px) 33vw,100vw"
                       className={styles.tileImage}
                     />
                   </div>
                   <span className={styles.badge}>
-                    {index === 0 ? "Shown first" : `Slot ${index + 1}`}
+                    {i === 0 ? "Shown first" : `Slot ${i + 1}`}
                   </span>
                   <button
                     type="button"
                     className={styles.deleteButton}
-                    onClick={() => removeBanner(url)}
-                    aria-label={`Remove banner ${index + 1}`}
+                    disabled={busy}
+                    aria-label={`Remove banner ${i + 1}`}
+                    onClick={() => void remove(url)}
                   >
                     <Trash2Icon size={15} />
                   </button>
@@ -109,6 +128,10 @@ export default function BannersManager() {
               </div>
             ))}
           </div>
+        ) : (
+          <p className={styles.empty}>
+            No banners yet. Upload a storefront image.
+          </p>
         )}
       </div>
     </div>

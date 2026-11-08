@@ -83,7 +83,12 @@ export type CustomerRow = {
 
 export type OrderStatus = "pending" | "shipping" | "completed" | "cancelled";
 export type PaymentMethod = "gcash" | "cod";
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "rejected";
+export type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "rejected";
 
 export type OrderItemRow = {
   id: string;
@@ -268,6 +273,9 @@ export type EventRegistrationRow = {
   payment_status: RegistrationPaymentStatus;
   status: RegistrationStatus;
   proof_screenshot_url: string | null;
+  reference_number?: string | null;
+  payment_sender_name?: string | null;
+  payment_phone_number?: string | null;
   rejection_reason: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -276,7 +284,13 @@ export type EventRegistrationRow = {
   /** Populated by the customer/admin detail queries. */
   event?: Pick<
     EventRow,
-    "id" | "slug" | "title" | "category" | "event_date" | "location" | "banner_image_url"
+    | "id"
+    | "slug"
+    | "title"
+    | "category"
+    | "event_date"
+    | "location"
+    | "banner_image_url"
   > | null;
 };
 
@@ -307,4 +321,3 @@ export type EventInput = {
   banner_image_url: string | null;
   status: EventStatus;
 };
-

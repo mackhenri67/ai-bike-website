@@ -28,13 +28,28 @@ function sanitizeItems(raw: unknown): CartItem[] {
     items.push({
       key,
       productId,
+      variantId: typeof e.variantId === "string" ? e.variantId : undefined,
+      options:
+        e.options && typeof e.options === "object" && !Array.isArray(e.options)
+          ? (Object.fromEntries(
+              Object.entries(e.options).filter(
+                ([, v]) => typeof v === "string",
+              ),
+            ) as Record<string, string>)
+          : undefined,
+      builderStepNumber:
+        typeof e.builderStepNumber === "number"
+          ? e.builderStepNumber
+          : undefined,
       name: String(e.name ?? "Product"),
       price: Number.isFinite(Number(e.price)) ? Number(e.price) : 0,
       image: String(e.image ?? ""),
       size: String(e.size ?? ""),
       color: String(e.color ?? ""),
       quantity: Number.isInteger(quantity) && quantity > 0 ? quantity : 1,
-      stock: Number.isFinite(Number(e.stock)) ? Math.max(0, Number(e.stock)) : 0,
+      stock: Number.isFinite(Number(e.stock))
+        ? Math.max(0, Number(e.stock))
+        : 0,
       selected: Boolean(e.selected),
     });
   }

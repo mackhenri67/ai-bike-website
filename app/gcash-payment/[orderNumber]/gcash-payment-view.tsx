@@ -3,7 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { uploadPaymentProof } from "@/lib/storage/upload-proof";
 import type { GcashPaymentRow } from "@/lib/data/types";
 import { submitGcashPaymentAction } from "./actions";
 import styles from "./page.module.css";
@@ -118,7 +118,7 @@ export default function GcashPaymentView({
 
   const [state, formAction, isSubmitting] = useActionState(
     submitGcashPaymentAction,
-    { error: null }
+    { error: null },
   );
 
   const canSubmit =
@@ -139,7 +139,7 @@ export default function GcashPaymentView({
     }
     if (file.size > MAX_FILE_SIZE) {
       setUploadError(
-        "The screenshot is larger than 10MB. Please choose a smaller image."
+        "The screenshot is larger than 10MB. Please choose a smaller image.",
       );
       return;
     }
@@ -150,37 +150,10 @@ export default function GcashPaymentView({
     setIsUploading(true);
 
     try {
-      const client = getBrowserClient();
-      if (!client) {
-        throw new Error(
-          "Supabase is not configured. Please refresh and try again."
-        );
-      }
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const path = `gcash-proofs/${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}-${safeName}`;
-      const { data, error } = await client.storage.from("images").upload(
-        path,
-        file,
-        {
-          contentType: file.type || "image/*",
-          cacheControl: "3600",
-          upsert: false,
-        }
-      );
-      if (error) {
-        throw new Error(
-          `Upload failed: ${error.message}. Make sure you are signed in and try again.`
-        );
-      }
-      const { data: urlData } = client.storage
-        .from("images")
-        .getPublicUrl(data.path);
-      setScreenshotUrl(urlData.publicUrl);
+      setScreenshotUrl(await uploadPaymentProof(file, "orders", order.id));
     } catch (err) {
       setUploadError(
-        err instanceof Error ? err.message : "Upload failed. Please try again."
+        err instanceof Error ? err.message : "Upload failed. Please try again.",
       );
       setPreviewUrl(null);
       setScreenshotUrl("");
@@ -198,7 +171,7 @@ export default function GcashPaymentView({
     }
   };
 
-  if (payment) {
+  if (payment && payment.status !== "rejected") {
     const status = PAYMENT_STATUS[payment.status] ?? {
       label: payment.status,
       className: "",
@@ -247,14 +220,10 @@ export default function GcashPaymentView({
             </div>
           </dl>
 
-          {payment.status === "rejected" && payment.rejection_reason ? (
-            <p className={styles.rejectionNote}>
-              Reason: {payment.rejection_reason}
-            </p>
-          ) : null}
-
           <div className={styles.screenshotBlock}>
-            <p className={styles.screenshotLabel}>Submitted Payment Screenshot</p>
+            <p className={styles.screenshotLabel}>
+              Submitted Payment Screenshot
+            </p>
             <div className={styles.screenshotFrame}>
               <img
                 src={payment.screenshot_url}
@@ -274,6 +243,16 @@ export default function GcashPaymentView({
 
   return (
     <div className={styles.grid}>
+      {payment?.status === "rejected" ? (
+        <p
+          role="alert"
+          className={styles.rejectionNote}
+          style={{ gridColumn: "1 / -1" }}
+        >
+          Your previous proof was rejected:{" "}
+          {payment.rejection_reason || "Please upload a corrected screenshot."}
+        </p>
+      ) : null}
       {/* Left — merchant GCash payment information */}
       <section className={styles.panel} aria-labelledby="gcash-info-title">
         <div className={styles.panelHeading}>
@@ -433,4 +412,3 @@ export default function GcashPaymentView({
     </div>
   );
 }
-

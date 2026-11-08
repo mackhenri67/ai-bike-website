@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { isOwnProofPath } from "@/lib/storage/proof-path";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateCustomer } from "@/lib/data/customer/customers";
 import {
@@ -12,22 +13,17 @@ export type SubmitGcashState = {
   error: string | null;
 };
 
-/**
- * Server Action: records the customer's GCash payment submission.
- *
- * The screenshot is uploaded straight to the public `images` storage bucket
- * from the browser (same pattern as the admin Products manager) and only the
- * resulting URL is posted here — large files never pass through the Next.js
- * server. The URL is re-validated to the configured Supabase project so a
- * random external link can never be stored as a payment proof.
- */
+/** Accepts a private object path. The database transaction rechecks ownership,
+ * payment state, and object existence before saving the submission. */
 export async function submitGcashPaymentAction(
   prevState: SubmitGcashState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<SubmitGcashState> {
   const supabase = await createClient();
   if (!supabase) {
-    return { error: "Supabase is not configured. Please refresh and try again." };
+    return {
+      error: "Supabase is not configured. Please refresh and try again.",
+    };
   }
 
   const {
@@ -39,7 +35,9 @@ export async function submitGcashPaymentAction(
 
   const customer = await getOrCreateCustomer(user);
   if (!customer) {
-    return { error: "We couldn't load your customer account. Please try again." };
+    return {
+      error: "We couldn't load your customer account. Please try again.",
+    };
   }
 
   const orderId = String(formData.get("order_id") ?? "").trim();
@@ -50,7 +48,9 @@ export async function submitGcashPaymentAction(
   const screenshotUrl = String(formData.get("screenshot_url") ?? "").trim();
 
   if (!orderId || !orderNumber) {
-    return { error: "The order could not be identified. Please go back and try again." };
+    return {
+      error: "The order could not be identified. Please go back and try again.",
+    };
   }
   if (!senderName) {
     return { error: "Please enter your full name." };
@@ -58,20 +58,16 @@ export async function submitGcashPaymentAction(
   const normalizedPhone = normalizePhMobileNumber(phoneNumber);
   if (!normalizedPhone) {
     return {
-      error: "Please enter a valid Philippine mobile number (e.g. 0917 123 4567).",
+      error:
+        "Please enter a valid Philippine mobile number (e.g. 0917 123 4567).",
     };
   }
   if (!screenshotUrl) {
     return { error: "Please upload a screenshot of your GCash payment." };
   }
 
-  const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
-  if (
-    !storageUrl ||
-    !screenshotUrl.startsWith(`${storageUrl}/storage/v1/object/public/images/`)
-  ) {
-    return { error: "The uploaded screenshot is not valid. Please upload it again." };
-  }
+  if (!isOwnProofPath(screenshotUrl, user.id))
+    return { error: "Upload a new screenshot using your own account." };
 
   const result = await submitGcashPayment({
     orderId,

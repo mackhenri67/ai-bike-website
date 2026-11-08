@@ -1,7 +1,9 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
+import { isOwnProofPath } from "@/lib/storage/proof-path";
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhMobileNumber } from "@/lib/data/customer/gcash";
 import { submitEventGcashPayment } from "@/lib/data/customer/events";
 
 export type SubmitEventPaymentState = {
@@ -9,34 +11,33 @@ export type SubmitEventPaymentState = {
   success: boolean;
 };
 
-/**
- * Server Action: records the customer's GCash payment proof for an event
- * registration.
- *
- * The screenshot is uploaded straight to the public `images` storage bucket
- * from the browser (same pattern as the order GCash flow and the admin
- * Products manager) and only the resulting URL is posted here, so large files
- * never pass through the Next.js server. The URL is re-validated to the
- * configured Supabase project so a random external link can never be stored as
- * a payment proof.
- */
+/** Accepts a private object path. The database transaction rechecks ownership,
+ * payment state, and object existence before saving the submission. */
 export async function submitEventGcashPaymentAction(
   _prevState: SubmitEventPaymentState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<SubmitEventPaymentState> {
   const supabase = await createClient();
   if (!supabase) {
-    return { error: "Supabase is not configured. Please refresh and try again.", success: false };
+    return {
+      error: "Supabase is not configured. Please refresh and try again.",
+      success: false,
+    };
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "You must be signed in to submit a payment.", success: false };
+    return {
+      error: "You must be signed in to submit a payment.",
+      success: false,
+    };
   }
 
-  const registrationCode = String(formData.get("registration_code") ?? "").trim();
+  const registrationCode = String(
+    formData.get("registration_code") ?? "",
+  ).trim();
   const senderName = String(formData.get("sender_name") ?? "").trim();
   const phoneNumber = String(formData.get("phone_number") ?? "").trim();
   const referenceNumber = String(formData.get("reference_number") ?? "").trim();
@@ -52,21 +53,25 @@ export async function submitEventGcashPaymentAction(
     return { error: "Please enter your GCash phone number.", success: false };
   }
   if (!screenshotUrl) {
-    return { error: "Please upload your GCash payment screenshot.", success: false };
+    return {
+      error: "Please upload your GCash payment screenshot.",
+      success: false,
+    };
   }
 
-  const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
-  if (
-    !storageUrl ||
-    !screenshotUrl.startsWith(`${storageUrl}/storage/v1/object/public/images/`)
-  ) {
-    return { error: "The uploaded screenshot is not valid. Please upload it again.", success: false };
-  }
+  if (!isOwnProofPath(screenshotUrl, user.id))
+    return {
+      error: "Upload a new screenshot using your own account.",
+      success: false,
+    };
 
+  const normalizedPhone = normalizePhMobileNumber(phoneNumber);
+  if (!normalizedPhone)
+    return { error: "Enter a valid Philippine mobile number.", success: false };
   const result = await submitEventGcashPayment({
     registrationCode,
     senderName,
-    phoneNumber,
+    phoneNumber: normalizedPhone,
     referenceNumber: referenceNumber || null,
     screenshotUrl,
   });

@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { getAdminBrowserClient } from "@/lib/supabase/client";
 import { saveGcashSettingsAction } from "./actions";
 import styles from "./page.module.css";
 
@@ -26,10 +26,13 @@ export default function SettingsForm({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [state, formAction, isSaving] = useActionState(saveGcashSettingsAction, {
-    error: null,
-    saved: false,
-  });
+  const [state, formAction, isSaving] = useActionState(
+    saveGcashSettingsAction,
+    {
+      error: null,
+      saved: false,
+    },
+  );
 
   const handleQrChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -42,7 +45,7 @@ export default function SettingsForm({
     }
     if (file.size > MAX_FILE_SIZE) {
       setUploadError(
-        "The image is larger than 10MB. Please choose a smaller one."
+        "The image is larger than 10MB. Please choose a smaller one.",
       );
       return;
     }
@@ -51,28 +54,26 @@ export default function SettingsForm({
     setUploading(true);
 
     try {
-      const client = getBrowserClient();
+      const client = getAdminBrowserClient();
       if (!client) {
         throw new Error(
-          "Supabase is not configured. Please refresh and try again."
+          "Supabase is not configured. Please refresh and try again.",
         );
       }
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
       const path = `gcash/${Date.now()}-${Math.random()
         .toString(36)
         .slice(2, 8)}-${safeName}`;
-      const { data, error } = await client.storage.from("images").upload(
-        path,
-        file,
-        {
+      const { data, error } = await client.storage
+        .from("images")
+        .upload(path, file, {
           contentType: file.type || "image/*",
           cacheControl: "3600",
           upsert: false,
-        }
-      );
+        });
       if (error) {
         throw new Error(
-          `Upload failed: ${error.message}. Make sure you are signed in and the "images" bucket allows uploads.`
+          `Upload failed: ${error.message}. Make sure you are signed in and the "images" bucket allows uploads.`,
         );
       }
       const { data: urlData } = client.storage
@@ -81,7 +82,7 @@ export default function SettingsForm({
       setQrCodeUrl(urlData.publicUrl);
     } catch (err) {
       setUploadError(
-        err instanceof Error ? err.message : "Upload failed. Please try again."
+        err instanceof Error ? err.message : "Upload failed. Please try again.",
       );
     } finally {
       setUploading(false);

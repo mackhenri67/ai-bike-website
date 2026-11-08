@@ -11,7 +11,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import type { UserResponse } from "@supabase/supabase-js";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { getAdminBrowserClient } from "@/lib/supabase/client";
 import { getNewOrderIds } from "@/app/admin/(shell)/orders/actions";
 
 /**
@@ -124,9 +124,9 @@ export function NewOrdersProvider({ children }: { children: ReactNode }) {
   // Resolve the per-admin storage key from the authenticated session once.
   useEffect(() => {
     let cancelled = false;
-    let client: ReturnType<typeof getBrowserClient> | null = null;
+    let client: ReturnType<typeof getAdminBrowserClient> | null = null;
     try {
-      client = getBrowserClient();
+      client = getAdminBrowserClient();
     } catch {
       // Supabase unconfigured — notifications still refresh, just not persisted.
     }
@@ -146,7 +146,10 @@ export function NewOrdersProvider({ children }: { children: ReactNode }) {
   // Initial fetch + poll + refresh on focus/visibility and on route changes.
   useEffect(() => {
     void refreshRef.current();
-    const timer = setInterval(() => void refreshRef.current(), POLL_INTERVAL_MS);
+    const timer = setInterval(
+      () => void refreshRef.current(),
+      POLL_INTERVAL_MS,
+    );
 
     const onActive = () => {
       if (document.visibilityState === "visible") void refreshRef.current();
