@@ -20,7 +20,7 @@ const NAV_LINKS = [
   { href: "/products", label: "Products" },
   { href: "/events", label: "Events" },
   { href: "/about", label: "About Us" },
-  { href: "/#bike-customize", label: "Bike Customize" },
+  { href: "/#bike-customize", label: "Build A Bike" },
 ];
 
 /**

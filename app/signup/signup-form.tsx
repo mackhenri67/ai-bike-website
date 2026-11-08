@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useActionState } from "react";
 import { customerSignUp, type SignUpState } from "./actions";
 import LocationPicker from "@/components/customer/LocationPicker";
@@ -31,6 +32,7 @@ export default function SignUpForm({ next }: SignUpFormProps) {
   const [state, formAction, isSubmitting] = useActionState(customerSignUp, INITIAL);
   const [step, setStep] = useState<1 | 2>(1);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const [locationPending, setLocationPending] = useState(false);
 
   const handleContinue = (event: FormEvent) => {
@@ -55,6 +57,10 @@ export default function SignUpForm({ next }: SignUpFormProps) {
       return;
     }
 
+    if (!agreed) {
+      setLocalError("Please agree to the Terms and Conditions and acknowledge the Privacy Policy.");
+      return;
+    }
     setLocalError(null);
     setStep(2);
   };
@@ -162,6 +168,12 @@ export default function SignUpForm({ next }: SignUpFormProps) {
           />
         </div>
 
+        <label className={styles.agreement}>
+          <input type="checkbox" name="accept_terms" value="yes" required
+            checked={agreed} onChange={(event) => setAgreed(event.target.checked)} />
+          <span>I agree to the <Link href="/terms" target="_blank" rel="noopener noreferrer">Terms and Conditions</Link> and acknowledge the <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>.</span>
+        </label>
+
         {localError ? (
           <p role="alert" className={styles.error}>
             {localError}
@@ -202,7 +214,7 @@ export default function SignUpForm({ next }: SignUpFormProps) {
           <button
             type="submit"
             className={styles.button}
-            disabled={isSubmitting || locationPending}
+            disabled={isSubmitting || locationPending || !agreed}
           >
             {isSubmitting
               ? "Creating account…"

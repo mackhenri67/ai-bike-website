@@ -37,6 +37,7 @@ export default async function Home() {
         <HeroCarousel />
 
         <ProductSection
+          className={styles.gap}
           title="New Arrivals"
           products={newArrivals ?? []}
           viewAllHref="/products"

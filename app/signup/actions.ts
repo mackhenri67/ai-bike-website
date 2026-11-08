@@ -27,6 +27,9 @@ export async function customerSignUp(
   prevState: SignUpState | undefined,
   formData: FormData,
 ): Promise<SignUpState> {
+  if (formData.get("accept_terms") !== "yes") {
+    return { error: "Please agree to the Terms and Conditions and acknowledge the Privacy Policy.", needsEmailConfirmation: false, message: null };
+  }
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "")
     .trim()
@@ -93,6 +96,9 @@ export async function customerSignUp(
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
       data: {
+        terms_version: "2026-11-08",
+        terms_accepted_at: new Date().toISOString(),
+        privacy_acknowledged_version: "2026-11-08",
         full_name: fullName,
         phone: phone ?? undefined,
       },

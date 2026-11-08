@@ -403,3 +403,7 @@
   line-height: 20px;
   color: #15803d;
 }
+
+.agreement { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.6; }
+.agreement input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 3px; accent-color: #b88b00; }
+.agreement a { color: #785700; text-decoration: underline; text-underline-offset: 3px; }

@@ -34,6 +34,7 @@ export default function CustomerFooter() {
         </nav>
 
         <div className={styles.brand}>
+          <Link href="/" aria-label="LNR Cycle Center home">
           <Image
             src={LOGO_SRC}
             alt="LNR Cycle Center"
@@ -41,7 +42,8 @@ export default function CustomerFooter() {
             height={73}
             className={styles.logo}
           />
-          <p className={styles.copyright}>© LNR Cycle Center 2025</p>
+          </Link>
+          <p className={styles.copyright}>© LNR Cycle Center 2026</p>
         </div>
 
         <div className={styles.column}>
