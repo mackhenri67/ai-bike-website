@@ -12,23 +12,27 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Sign in | LnR Cycle Center",
-  description: "Sign in to your LnR Cycle Center account to check out and track orders.",
+  description:
+    "Sign in to your LnR Cycle Center account to check out and track orders.",
 };
 
 type LoginPageProps = {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; confirmation?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const user = await getUser();
-  const { next } = await searchParams;
+  const { next, confirmation } = await searchParams;
 
   // Already signed in? Go to the profile area.
   if (user) {
     redirect("/profile");
   }
 
-  const nextPath = sanitizeNext(typeof next === "string" ? next : "", "/profile");
+  const nextPath = sanitizeNext(
+    typeof next === "string" ? next : "",
+    "/profile",
+  );
   const signupHref = `/signup?next=${encodeURIComponent(nextPath)}`;
 
   return (
@@ -43,6 +47,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Sign in to continue to checkout, track your orders and manage your
             delivery location.
           </p>
+          {confirmation === "failed" ? (
+            <p role="alert">
+              The confirmation link could not be completed in this browser. Try
+              signing in, or request a new link.
+            </p>
+          ) : null}
           <LoginForm next={nextPath} />
           <p className={styles.switch}>
             New to LnR Cycle Center?{" "}

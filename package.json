@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:repairs": "node --test tests/database-repairs.test.mjs tests/auth-repairs.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^3.0.0",
@@ -20,6 +21,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -30,5 +32,13 @@
   "allowScripts": {
     "protobufjs@7.6.6": true,
     "unrs-resolver@1.12.2": true
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.5"
+    }
   }
 }

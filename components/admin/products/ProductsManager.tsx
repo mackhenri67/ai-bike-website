@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { getAdminBrowserClient } from "@/lib/supabase/client";
 import {
   type CategoryRow,
   type ProductInput,
@@ -14,9 +14,7 @@ import {
   saveProductAction,
   deleteProductAction,
 } from "@/app/admin/(shell)/products/actions";
-import ProductFormModal, {
-  type ProductFormPayload,
-} from "./ProductFormModal";
+import ProductFormModal, { type ProductFormPayload } from "./ProductFormModal";
 import styles from "./ProductsManager.module.css";
 import {
   ImageIcon,
@@ -63,7 +61,7 @@ function slugify(value: string): string {
 
 function productThumbnail(product: ProductRow): string | null {
   const images = [...(product.product_images ?? [])].sort(
-    (a, b) => a.sort_order - b.sort_order
+    (a, b) => a.sort_order - b.sort_order,
   );
   return (
     images.find((image) => image.is_primary)?.url ?? images[0]?.url ?? null
@@ -72,7 +70,7 @@ function productThumbnail(product: ProductRow): string | null {
 
 function categoryName(
   categories: CategoryRow[],
-  categoryId: string | null
+  categoryId: string | null,
 ): string {
   return categories.find((category) => category.id === categoryId)?.name ?? "";
 }
@@ -85,7 +83,7 @@ export default function ProductsManager({
   const router = useRouter();
   const [products, setProducts] = useState<ProductRow[]>(initialProducts);
   const [pageError, setPageError] = useState<string | null>(
-    initialError ?? null
+    initialError ?? null,
   );
   const [modal, setModal] = useState<ModalState>(null);
   const [deleting, setDeleting] = useState<ProductRow | null>(null);
@@ -112,7 +110,7 @@ export default function ProductsManager({
   });
 
   const uploadImageToStorage = async (file: File): Promise<string | null> => {
-    const client = getBrowserClient();
+    const client = getAdminBrowserClient();
     if (!client) {
       return null;
     }
@@ -120,15 +118,13 @@ export default function ProductsManager({
     const path = `products/${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 8)}-${safeName}`;
-    const { data, error } = await client.storage.from("images").upload(
-      path,
-      file,
-      {
+    const { data, error } = await client.storage
+      .from("images")
+      .upload(path, file, {
         contentType: file.type || "image/*",
         cacheControl: "3600",
         upsert: false,
-      }
-    );
+      });
     if (error) {
       return null;
     }
@@ -137,7 +133,6 @@ export default function ProductsManager({
       .getPublicUrl(data.path);
     return urlData.publicUrl;
   };
-
 
   const openAdd = () => {
     slugEdited.current = false;
@@ -171,14 +166,17 @@ export default function ProductsManager({
     return urls;
   };
 
-  const buildPayload = (payload: ProductFormPayload, product: ProductRow | null): ProductInput => {
+  const buildPayload = (
+    payload: ProductFormPayload,
+    product: ProductRow | null,
+  ): ProductInput => {
     const images = [payload.thumbnail, ...payload.images].filter(Boolean);
     const variants = payload.variants.filter(
-      (variant) => variant.size || variant.color || variant.sku
+      (variant) => variant.size || variant.color || variant.sku,
     );
     const variantStock = variants.reduce(
       (sum, variant) => sum + (Math.floor(Number(variant.stock)) || 0),
-      0
+      0,
     );
     const specsList = payload.specs
       .split("\n")
@@ -213,7 +211,10 @@ export default function ProductsManager({
         variants.length > 0
           ? variantStock
           : Math.floor(Number(payload.stock)) || 0,
-      status: payload.available && Number(payload.stock) > 0 ? "active" : payload.status,
+      status:
+        payload.available && Number(payload.stock) > 0
+          ? "active"
+          : payload.status,
       is_featured: payload.isFeatured,
       is_new_arrival: payload.isNewArrival,
       sort_order: 0,
@@ -255,7 +256,6 @@ export default function ProductsManager({
     setPageError(null);
     router.refresh();
   };
-
 
   return (
     <div className={styles.card}>
@@ -351,9 +351,14 @@ export default function ProductsManager({
                     </td>
                     <td className={styles.td}>
                       <div className={styles.nameCell}>
-                        <span className={styles.productName}>{product.name}</span>
+                        <span className={styles.productName}>
+                          {product.name}
+                        </span>
                         <span className={styles.productDesc}>
-                          {[product.sku, categoryName(categories, product.category_id)]
+                          {[
+                            product.sku,
+                            categoryName(categories, product.category_id),
+                          ]
                             .filter(Boolean)
                             .join(" · ") || product.description}
                         </span>
@@ -409,7 +414,6 @@ export default function ProductsManager({
           </tbody>
         </table>
       </div>
-
 
       {/* --- Add / Edit product modal --- */}
       {modal && (
@@ -467,4 +471,3 @@ export default function ProductsManager({
     </div>
   );
 }
-

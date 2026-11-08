@@ -1,4 +1,5 @@
 "use client";
+import { builderAxes, builderVariant } from "@/lib/builder-options";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -72,11 +73,13 @@ function hasChosenOptions(step: BuilderStep, selection?: Selection): boolean {
   return Boolean(
     selection &&
       selection.product.stock > 0 &&
-      step.axes.every(
+      (!selection.product.variants?.length ||
+        Boolean(builderVariant(selection.product, selection.axisValues))) &&
+      builderAxes(step, selection.product).every(
         (axis) =>
           axis.options.length === 0 ||
-          axis.options.includes(selection.axisValues[axis.label])
-      )
+          axis.options.includes(selection.axisValues[axis.label]),
+      ),
   );
 }
 
@@ -110,7 +113,7 @@ export default function CustomBikeBuilder({
 
   const orderedSteps = useMemo(
     () => [...steps].sort((a, b) => a.stepNumber - b.stepNumber),
-    [steps]
+    [steps],
   );
 
   const startBuilding = () => {
@@ -121,11 +124,23 @@ export default function CustomBikeBuilder({
       const firstInStock = step.products.find((p) => p.stock > 0);
       if (!firstInStock) continue;
       const values: Record<string, string> = {};
-      for (const axis of step.axes) {
+      for (const axis of builderAxes(step, firstInStock)) {
         if (axis.options.length > 0) values[axis.label] = axis.options[0];
       }
       initial[step.stepNumber] = {
-        product: firstInStock,
+        product: (() => {
+          const v = builderVariant(firstInStock, values);
+          return v
+            ? {
+                ...firstInStock,
+                price: v.price,
+                stock: Math.min(
+                  firstInStock.catalogueStock ?? firstInStock.stock,
+                  v.stock,
+                ),
+              }
+            : firstInStock;
+        })(),
         axisValues: values,
       };
     }
@@ -149,6 +164,22 @@ export default function CustomBikeBuilder({
         [stepNumber]: {
           ...selection,
           axisValues: { ...selection.axisValues, [label]: value },
+          product: (() => {
+            const v = builderVariant(selection.product, {
+              ...selection.axisValues,
+              [label]: value,
+            });
+            return v
+              ? {
+                  ...selection.product,
+                  price: v.price,
+                  stock: Math.min(
+                    selection.product.catalogueStock ?? selection.product.stock,
+                    v.stock,
+                  ),
+                }
+              : selection.product;
+          })(),
         },
       };
     });
@@ -160,13 +191,16 @@ export default function CustomBikeBuilder({
     setLoginRequired(false);
     const riderPrompt = prompt.trim();
     if (riderPrompt.length < 3 || riderPrompt.length > 2_000) {
-      setAiError("Describe how and where you ride using 3 to 2,000 characters.");
+      setAiError(
+        "Describe how and where you ride using 3 to 2,000 characters.",
+      );
       return;
     }
     const budget = budgetInput.trim() === "" ? null : Number(budgetInput);
     if (
       budget !== null &&
-      (!Number.isFinite(budget) || budget <= 0 ||
+      (!Number.isFinite(budget) ||
+        budget <= 0 ||
         !Number.isSafeInteger(Math.round(budget * 100)))
     ) {
       setAiError("Enter a positive parts budget in pesos, or leave it empty.");
@@ -189,14 +223,16 @@ export default function CustomBikeBuilder({
       }
       if (!response.ok) {
         setLoginRequired(response.status === 401);
-        let message = isRecord(data) && typeof data.error === "string"
-          ? data.error
-          : "The AI builder could not complete your request.";
+        let message =
+          isRecord(data) && typeof data.error === "string"
+            ? data.error
+            : "The AI builder could not complete your request.";
         if (isRecord(data) && Array.isArray(data.missingSteps)) {
           const missing = data.missingSteps.filter(
-            (name: unknown): name is string => typeof name === "string"
+            (name: unknown): name is string => typeof name === "string",
           );
-          if (missing.length > 0) message += " Unavailable parts: " + missing.join(", ") + ".";
+          if (missing.length > 0)
+            message += " Unavailable parts: " + missing.join(", ") + ".";
         }
         if (
           response.status === 429 &&
@@ -205,7 +241,8 @@ export default function CustomBikeBuilder({
           Number.isFinite(data.retryAfter) &&
           data.retryAfter > 0
         ) {
-          message += " Try again in " + Math.ceil(data.retryAfter) + " seconds.";
+          message +=
+            " Try again in " + Math.ceil(data.retryAfter) + " seconds.";
         }
         throw new Error(message);
       }
@@ -214,7 +251,9 @@ export default function CustomBikeBuilder({
         !Array.isArray(data.selections) ||
         data.selections.length !== orderedSteps.length
       ) {
-        throw new Error("The AI builder did not return a complete recommendation.");
+        throw new Error(
+          "The AI builder did not return a complete recommendation.",
+        );
       }
 
       const suggested: Record<number, Selection> = {};
@@ -229,11 +268,20 @@ export default function CustomBikeBuilder({
           choice.product.id !== choice.productId ||
           suggested[choice.stepNumber]
         ) {
-          throw new Error("The AI builder returned an invalid selection. Please try again.");
+          throw new Error(
+            "The AI builder returned an invalid selection. Please try again.",
+          );
         }
-        const step = orderedSteps.find((item) => item.stepNumber === choice.stepNumber);
-        if (!step || !step.products.some((product) => product.id === choice.productId)) {
-          throw new Error("The catalogue has changed. Refresh the page and request a new build.");
+        const step = orderedSteps.find(
+          (item) => item.stepNumber === choice.stepNumber,
+        );
+        if (
+          !step ||
+          !step.products.some((product) => product.id === choice.productId)
+        ) {
+          throw new Error(
+            "The catalogue has changed. Refresh the page and request a new build.",
+          );
         }
         suggested[choice.stepNumber] = {
           product: choice.product,
@@ -245,12 +293,14 @@ export default function CustomBikeBuilder({
 
       setSelections(suggested);
       setAiExplanation(
-        typeof data.explanation === "string" ? data.explanation.slice(0, 1_000) : ""
+        typeof data.explanation === "string"
+          ? data.explanation.slice(0, 1_000)
+          : "",
       );
       setAiNotice(
         typeof data.compatibilityNotice === "string"
           ? data.compatibilityNotice.slice(0, 1_000)
-          : "Have the shop confirm mechanical compatibility, sizes, and final fit before assembly."
+          : "Have the shop confirm mechanical compatibility, sizes, and final fit before assembly.",
       );
       setAiGenerated(true);
       setCurrentStep(0);
@@ -261,7 +311,7 @@ export default function CustomBikeBuilder({
       setAiError(
         error instanceof Error && !(error instanceof TypeError)
           ? error.message
-          : "The AI builder could not be reached. Please try again."
+          : "The AI builder could not be reached. Please try again.",
       );
     } finally {
       setAiLoading(false);
@@ -322,8 +372,8 @@ export default function CustomBikeBuilder({
                 orderedSteps.reduce(
                   (sum, step) =>
                     sum + (step.products.find((p) => p.stock > 0)?.price ?? 0),
-                  0
-                )
+                  0,
+                ),
               )}
             </span>
           </div>
@@ -347,9 +397,9 @@ export default function CustomBikeBuilder({
             </div>
 
             <p className={styles.aiDesc}>
-              Describe your terrain, weather, height, and riding needs.
-              AI will suggest available parts for you to review. You can set
-              your sizes and colours before adding the build to your cart.
+              Describe your terrain, weather, height, and riding needs. AI will
+              suggest available parts for you to review. You can set your sizes
+              and colours before adding the build to your cart.
             </p>
 
             <div className={styles.textarea}>
@@ -365,7 +415,9 @@ export default function CustomBikeBuilder({
             </div>
 
             <label className={styles.budgetField}>
-              <span className={styles.axisLabel}>Maximum parts budget (₱, optional)</span>
+              <span className={styles.axisLabel}>
+                Maximum parts budget (₱, optional)
+              </span>
               <input
                 type="number"
                 inputMode="decimal"
@@ -415,14 +467,21 @@ export default function CustomBikeBuilder({
             </button>
             {aiLoading ? (
               <p className={styles.aiDesc} role="status">
-                Choosing parts from the available catalogue. This may take a moment.
+                Choosing parts from the available catalogue. This may take a
+                moment.
               </p>
             ) : null}
             {aiError ? (
               <p className={styles.errorText} role="alert">
                 {aiError}
                 {loginRequired ? (
-                  <> <Link href="/login?next=%2Fcustom-bike-builder">Sign in to request a build</Link>.</>
+                  <>
+                    {" "}
+                    <Link href="/login?next=%2Fcustom-bike-builder">
+                      Sign in to request a build
+                    </Link>
+                    .
+                  </>
                 ) : null}
               </p>
             ) : null}
@@ -475,20 +534,19 @@ export default function CustomBikeBuilder({
     );
   }
 
-
   // ---- Builder -------------------------------------------------------------
   if (view === "builder") {
     const step = orderedSteps[currentStep];
     const selection = selections[step.stepNumber];
     const isLast = currentStep === orderedSteps.length - 1;
     const canContinue = hasChosenOptions(step, selection);
-    const products = selection && !step.products.some(
-      (product) => product.id === selection.product.id
-    )
-      ? [selection.product, ...step.products]
-      : step.products.map((product) =>
-          product.id === selection?.product.id ? selection.product : product
-        );
+    const products =
+      selection &&
+      !step.products.some((product) => product.id === selection.product.id)
+        ? [selection.product, ...step.products]
+        : step.products.map((product) =>
+            product.id === selection?.product.id ? selection.product : product,
+          );
 
     const chooseProduct = (product: BuilderProduct) => {
       setAiExplanation("");
@@ -540,8 +598,7 @@ export default function CustomBikeBuilder({
           {/* Product options */}
           <div className={styles.productGrid}>
             {products.map((product) => {
-              const active =
-                selection?.product.id === product.id;
+              const active = selection?.product.id === product.id;
               const outOfStock = product.stock <= 0;
               const onSale =
                 product.compareAtPrice !== null &&
@@ -572,7 +629,9 @@ export default function CustomBikeBuilder({
                   <div className={styles.productBody}>
                     <h3 className={styles.productName}>{product.name}</h3>
                     {product.description ? (
-                      <p className={styles.productDesc}>{product.description}</p>
+                      <p className={styles.productDesc}>
+                        {product.description}
+                      </p>
                     ) : null}
                     <p className={styles.productPrice}>
                       {formatPeso(product.price)}
@@ -587,7 +646,9 @@ export default function CustomBikeBuilder({
                         outOfStock ? styles.stockOut : styles.productStock
                       }
                     >
-                      {outOfStock ? "Out of stock" : `${product.stock} in stock`}
+                      {outOfStock
+                        ? "Out of stock"
+                        : `${product.stock} in stock`}
                     </p>
                   </div>
                 </button>
@@ -596,13 +657,12 @@ export default function CustomBikeBuilder({
           </div>
 
           {/* Axis selectors for the chosen product */}
-          {step.axes.length > 0 ? (
+          {builderAxes(step, selection?.product).length > 0 ? (
             <div className={styles.optionsCard}>
               <h2 className={styles.optionsTitle}>Customize this part</h2>
               <div className={styles.axisGrid}>
-                {step.axes.map((axis) => {
-                  const current =
-                    selection?.axisValues[axis.label] ?? "";
+                {builderAxes(step, selection?.product).map((axis) => {
+                  const current = selection?.axisValues[axis.label] ?? "";
                   return (
                     <label key={axis.label} className={styles.axisField}>
                       <span className={styles.axisLabel}>{axis.label}</span>
@@ -612,10 +672,16 @@ export default function CustomBikeBuilder({
                         aria-label={step.name + " " + axis.label}
                         disabled={!selection || axis.options.length === 0}
                         onChange={(event) =>
-                          changeAxis(step.stepNumber, axis.label, event.target.value)
+                          changeAxis(
+                            step.stepNumber,
+                            axis.label,
+                            event.target.value,
+                          )
                         }
                       >
-                        <option value="" disabled>Choose {axis.label.toLowerCase()}</option>
+                        <option value="" disabled>
+                          Choose {axis.label.toLowerCase()}
+                        </option>
                         {axis.options.map((option) => (
                           <option key={option} value={option}>
                             {option}
@@ -668,7 +734,6 @@ export default function CustomBikeBuilder({
     );
   }
 
-
   // ---- Review --------------------------------------------------------------
   const total = orderedSteps.reduce((sum, step) => {
     const s = selections[step.stepNumber];
@@ -682,8 +747,8 @@ export default function CustomBikeBuilder({
     }))
     .filter((entry) => entry.selection);
 
-  const buildComplete = orderedSteps.every(
-    (step) => hasChosenOptions(step, selections[step.stepNumber])
+  const buildComplete = orderedSteps.every((step) =>
+    hasChosenOptions(step, selections[step.stepNumber]),
   );
 
   const handleAddToCart = () => {
@@ -697,12 +762,18 @@ export default function CustomBikeBuilder({
         .map(([label, value]) => `${label}: ${value}`)
         .join(" · ");
       const colorText =
-        axisEntries.find(([label]) => /colour|color|finish/i.test(label))?.[1] ??
+        axisEntries.find(([label]) =>
+          /colour|color|finish/i.test(label),
+        )?.[1] ??
         axisEntries[0]?.[1] ??
         "Custom";
 
       addItem({
         productId: selection!.product.id,
+        options: selection!.axisValues,
+        builderStepNumber: step.stepNumber,
+        variantId: builderVariant(selection!.product, selection!.axisValues)
+          ?.id,
         name: `${step.name} — ${selection!.product.name}`,
         price: selection!.product.price,
         image: selection!.product.image ?? PRODUCT_PLACEHOLDER_SRC,
@@ -730,9 +801,16 @@ export default function CustomBikeBuilder({
         </p>
 
         {aiGenerated ? (
-          <section className={styles.optionsCard} aria-label="AI recommendation">
-            <h2 className={styles.optionsTitle}>Suggested parts for your request</h2>
-            {aiExplanation ? <p className={styles.aiDesc}>{aiExplanation}</p> : null}
+          <section
+            className={styles.optionsCard}
+            aria-label="AI recommendation"
+          >
+            <h2 className={styles.optionsTitle}>
+              Suggested parts for your request
+            </h2>
+            {aiExplanation ? (
+              <p className={styles.aiDesc}>{aiExplanation}</p>
+            ) : null}
             <p className={styles.aiDesc}>{aiNotice}</p>
             <p className={styles.aiDesc}>
               Confirm the options below before adding the build to your cart.
@@ -774,27 +852,45 @@ export default function CustomBikeBuilder({
                   {selection!.reason ? (
                     <p className={styles.reviewReason}>{selection!.reason}</p>
                   ) : null}
-                  {aiGenerated && step.axes.some((axis) => axis.options.length > 0) ? (
+                  {aiGenerated &&
+                  builderAxes(step, selection?.product).some(
+                    (axis) => axis.options.length > 0,
+                  ) ? (
                     <div className={styles.reviewOptions}>
-                      {step.axes.filter((axis) => axis.options.length > 0).map((axis) => (
-                        <label key={axis.label} className={styles.reviewOption}>
-                          <span className={styles.axisLabel}>{axis.label}</span>
-                          <select
-                            className={styles.axisSelect}
-                            value={selection!.axisValues[axis.label] ?? ""}
-                            aria-label={step.name + " " + axis.label}
-                            disabled={added}
-                            onChange={(event) =>
-                              changeAxis(step.stepNumber, axis.label, event.target.value)
-                            }
+                      {builderAxes(step, selection?.product)
+                        .filter((axis) => axis.options.length > 0)
+                        .map((axis) => (
+                          <label
+                            key={axis.label}
+                            className={styles.reviewOption}
                           >
-                            <option value="" disabled>Choose {axis.label.toLowerCase()}</option>
-                            {axis.options.map((option) => (
-                              <option key={option} value={option}>{option}</option>
-                            ))}
-                          </select>
-                        </label>
-                      ))}
+                            <span className={styles.axisLabel}>
+                              {axis.label}
+                            </span>
+                            <select
+                              className={styles.axisSelect}
+                              value={selection!.axisValues[axis.label] ?? ""}
+                              aria-label={step.name + " " + axis.label}
+                              disabled={added}
+                              onChange={(event) =>
+                                changeAxis(
+                                  step.stepNumber,
+                                  axis.label,
+                                  event.target.value,
+                                )
+                              }
+                            >
+                              <option value="" disabled>
+                                Choose {axis.label.toLowerCase()}
+                              </option>
+                              {axis.options.map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
                     </div>
                   ) : null}
                 </div>
@@ -818,7 +914,8 @@ export default function CustomBikeBuilder({
         </p>
         {!buildComplete ? (
           <p className={styles.note} role="status">
-            Choose the sizes, colours, and other available options above to complete your build.
+            Choose the sizes, colours, and other available options above to
+            complete your build.
           </p>
         ) : null}
 
@@ -872,4 +969,3 @@ export default function CustomBikeBuilder({
     </main>
   );
 }
-

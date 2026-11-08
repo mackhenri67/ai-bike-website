@@ -1,5 +1,6 @@
 "use client";
 
+import { isAdmin } from "@/lib/auth/roles";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -43,46 +44,44 @@ export default function AccountMenu() {
 
   useEffect(() => {
     const client = getBrowserClient();
-
-    const toAccount = (
-      email: string | undefined,
-      fullName: unknown,
-    ): AccountState => {
-      if (!email) return null;
-      const name =
-        typeof fullName === "string" && fullName.trim()
-          ? fullName.trim()
-          : email.split("@")[0];
-      return { name, email };
+    let active = true;
+    let changed = false;
+    const toAccount = (user: User | null | undefined): AccountState => {
+      if (!user?.email || isAdmin(user)) return null;
+      const fullName = user.user_metadata?.full_name;
+      return {
+        name:
+          typeof fullName === "string" && fullName.trim()
+            ? fullName.trim()
+            : user.email.split("@")[0],
+        email: user.email,
+      };
     };
-
-    client.auth.getUser().then(
-      ({ data }: { data: { user: User | null } }) => {
-        setAccount(
-          toAccount(
-            data.user?.email,
-            data.user?.user_metadata?.full_name,
-          ),
-        );
-        setReady(true);
-      },
-    );
-
+    client.auth
+      .getUser()
+      .then(({ data }: { data: { user: User | null } }) => {
+        if (active && !changed) {
+          setAccount(toAccount(data.user));
+          setReady(true);
+        }
+      })
+      .catch(() => {
+        if (active) setReady(true);
+      });
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
-        setAccount(
-          toAccount(
-            session?.user?.email,
-            session?.user?.user_metadata?.full_name,
-          ),
-        );
+      (event: AuthChangeEvent, session: Session | null) => {
+        if (!active) return;
+        if (event !== "INITIAL_SESSION") changed = true;
+        setAccount(toAccount(session?.user));
         setReady(true);
       },
     );
-
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   /* ---------- Close on outside click ---------- */
@@ -127,7 +126,7 @@ export default function AccountMenu() {
     }
 
     try {
-      await getBrowserClient().auth.signOut();
+      await getBrowserClient().auth.signOut({ scope: "local" });
     } catch {
       /* CartContext's SIGNED_OUT handler also clears the client cart. */
     }
@@ -185,19 +184,34 @@ export default function AccountMenu() {
 
         <ul className={styles.menuList}>
           <li className={styles.menuItem}>
-            <Link href="/profile" className={styles.menuLink} role="menuitem" onClick={closeDropdown}>
+            <Link
+              href="/profile"
+              className={styles.menuLink}
+              role="menuitem"
+              onClick={closeDropdown}
+            >
               <UserIcon size={15} className={styles.menuIcon} />
               <span>My Account</span>
             </Link>
           </li>
           <li className={styles.menuItem}>
-            <Link href="/profile" className={styles.menuLink} role="menuitem" onClick={closeDropdown}>
+            <Link
+              href="/profile"
+              className={styles.menuLink}
+              role="menuitem"
+              onClick={closeDropdown}
+            >
               <OrdersIcon size={15} className={styles.menuIcon} />
               <span>My Orders</span>
             </Link>
           </li>
           <li className={styles.menuItem}>
-            <Link href="/my-events" className={styles.menuLink} role="menuitem" onClick={closeDropdown}>
+            <Link
+              href="/my-events"
+              className={styles.menuLink}
+              role="menuitem"
+              onClick={closeDropdown}
+            >
               <EventsIcon size={15} className={styles.menuIcon} />
               <span>My Events</span>
             </Link>

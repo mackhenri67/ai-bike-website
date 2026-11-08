@@ -1,60 +1,48 @@
+import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseConfig } from "./config";
-
-/**
- * Server-side Supabase client bound to the request cookie store.
- * Works in Server Components, Server Actions and Route Handlers.
- * Returns `null` when the environment variables are not configured.
- */
-export async function createClient() {
+import { SESSION_COOKIES, type SessionArea } from "@/lib/auth/session";
+import { isAdmin } from "@/lib/auth/roles";
+async function forArea(area: SessionArea) {
   const config = getSupabaseConfig();
-  if (!config) {
-    return null;
-  }
-
-  const cookieStore = await cookies();
-
+  if (!config) return null;
+  const jar = await cookies();
   return createServerClient(config.url, config.anonKey, {
+    cookieOptions: { name: SESSION_COOKIES[area] },
     cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
+      getAll: () => jar.getAll(),
+      setAll(values) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+          values.forEach(({ name, value, options }) =>
+            jar.set(name, value, options),
           );
         } catch {
-          // Called from a Server Component, which cannot set cookies.
-          // When this runs in a Server Action the cookie is applied.
+          /* Proxy refreshes cookies during Server Component renders. */
         }
       },
     },
   });
 }
-
-/**
- * Returns the authenticated Supabase user for the current request,
- * memoized per server render pass. `null` when signed out or when
- * Supabase is not configured.
- */
-export const getUser = cache(async (): Promise<User | null> => {
-  const supabase = await createClient();
-  if (!supabase) {
-    return null;
-  }
-
+export async function createClient() {
+  return forArea("customer");
+}
+export async function createAdminSessionClient() {
+  return forArea("admin");
+}
+async function verifiedUser(area: SessionArea): Promise<User | null> {
+  const client = await forArea(area);
+  if (!client) return null;
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    return null;
-  }
-
-  return user;
+  } = await client.auth.getUser();
+  return error ? null : user;
+}
+export const getUser = cache(async () => {
+  const user = await verifiedUser("customer");
+  return isAdmin(user) ? null : user;
 });
+export const getAdminUser = cache(() => verifiedUser("admin"));

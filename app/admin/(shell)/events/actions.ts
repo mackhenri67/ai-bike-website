@@ -1,19 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { getUser } from "@/lib/supabase/server";
-import { deleteEvent, updateEventStatus, upsertEvent } from "@/lib/data/admin/events";
+import { requireAdmin } from "@/lib/auth/guards";
+import {
+  deleteEvent,
+  updateEventStatus,
+  upsertEvent,
+} from "@/lib/data/admin/events";
 import type { EventInput, EventStatus } from "@/lib/data/types";
 
-async function requireAdmin() {
-  const user = await getUser();
-  if (!user) redirect("/admin/login");
-  return user;
-}
-
 export async function saveEventAction(
-  input: EventInput
+  input: EventInput,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
 
@@ -58,7 +55,7 @@ export async function saveEventAction(
 }
 
 export async function deleteEventAction(
-  id: string
+  id: string,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
 
@@ -76,7 +73,7 @@ const VALID_STATUS: EventStatus[] = ["draft", "published", "cancelled"];
 
 export async function updateEventStatusAction(
   id: string,
-  status: EventStatus
+  status: EventStatus,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
 

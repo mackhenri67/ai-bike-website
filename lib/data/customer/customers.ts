@@ -1,9 +1,13 @@
 import "server-only";
+import { isAdmin } from "@/lib/auth/roles";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
 import { type CustomerRow, type QueryResult } from "@/lib/data/types";
-import { missingServiceRoleMessage, toFriendlyDbError } from "@/lib/data/admin/errors";
+import {
+  missingServiceRoleMessage,
+  toFriendlyDbError,
+} from "@/lib/data/admin/errors";
 
 /**
  * Returns the customer directory row linked to the given auth user,
@@ -13,7 +17,7 @@ import { missingServiceRoleMessage, toFriendlyDbError } from "@/lib/data/admin/e
  * caller's own row.
  */
 export async function getCustomerByAuthUserId(
-  authUserId: string
+  authUserId: string,
 ): Promise<CustomerRow | null> {
   const supabase = await createClient();
   if (!supabase) return null;
@@ -34,8 +38,9 @@ export async function getCustomerByAuthUserId(
  * customer automatically has a directory row. Service-role for the write.
  */
 export async function getOrCreateCustomer(
-  user: User
+  user: User,
 ): Promise<CustomerRow | null> {
+  if (isAdmin(user)) return null;
   const admin = getAdminClient();
   if (!admin) return null;
 
@@ -48,7 +53,7 @@ export async function getOrCreateCustomer(
   if (existing) return existing as CustomerRow;
 
   const fullName = String(
-    user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Customer"
+    user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "Customer",
   ).trim();
   const phone = user.user_metadata?.phone
     ? String(user.user_metadata.phone).trim() || null
@@ -72,7 +77,7 @@ export async function getOrCreateCustomer(
 /** Updates the editable profile fields on the caller's customer row. */
 export async function updateCustomerProfile(
   customerId: string,
-  input: { full_name: string; phone: string | null }
+  input: { full_name: string; phone: string | null },
 ): Promise<QueryResult<null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };

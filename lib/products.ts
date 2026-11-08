@@ -1,4 +1,5 @@
 import "server-only";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -27,6 +28,14 @@ export type CatalogProduct = {
 };
 
 export type CatalogProductDetail = {
+  hasVariants: boolean;
+  variants: {
+    id: string;
+    size: string | null;
+    color: string | null;
+    price: number;
+    stock: number;
+  }[];
   id: string;
   slug: string;
   name: string;
@@ -71,7 +80,7 @@ const CATALOG_PRODUCT_SELECT = `
 `;
 
 function primaryImage(
-  images: { url: string; is_primary: boolean; sort_order: number }[] | null
+  images: { url: string; is_primary: boolean; sort_order: number }[] | null,
 ): string | null {
   if (!images || images.length === 0) return null;
   const sorted = [...images].sort((a, b) => a.sort_order - b.sort_order);
@@ -104,11 +113,13 @@ function mapCatalogProduct(row: {
     | { name: string; slug: string }
     | { name: string; slug: string }[]
     | null;
-  product_images: {
-    url: string;
-    is_primary: boolean;
-    sort_order: number;
-  }[] | null;
+  product_images:
+    | {
+        url: string;
+        is_primary: boolean;
+        sort_order: number;
+      }[]
+    | null;
 }): CatalogProduct {
   return {
     id: row.id,
@@ -136,7 +147,7 @@ function mapCatalogProduct(row: {
  * configured and an empty array when the filters simply match nothing.
  */
 export async function getCatalogProducts(
-  options: CatalogProductsOptions = {}
+  options: CatalogProductsOptions = {},
 ): Promise<CatalogProduct[] | null> {
   const supabase = await createClient();
   if (!supabase) return null;
@@ -174,14 +185,15 @@ export async function getCatalogProducts(
   const { data, error } = await query;
   if (error || !data) return null;
 
-  return (data as Parameters<typeof mapCatalogProduct>[0][]).map(mapCatalogProduct);
+  return (data as Parameters<typeof mapCatalogProduct>[0][]).map(
+    mapCatalogProduct,
+  );
 }
 
-
 export async function getCatalogProductBySlug(
-  slug: string
+  slug: string,
 ): Promise<CatalogProductDetail | null> {
-  const supabase = await createClient();
+  const supabase = getAdminClient();
   if (!supabase) return null;
 
   const { data, error } = await supabase
@@ -189,9 +201,9 @@ export async function getCatalogProductBySlug(
     .select(
       `id, name, slug, description, tagline, specs, price, compare_at_price,
        stock, is_featured, is_new_arrival,
-       category:categories(name, slug),
+       category:categories(name, slug, is_active),
        product_images(url, sort_order, is_primary),
-       product_variants(size, color)`
+       product_variants(id,size,color,price,stock,available)`,
     )
     .eq("slug", slug)
     .eq("status", "active")
@@ -199,6 +211,10 @@ export async function getCatalogProductBySlug(
 
   if (error || !data) return null;
 
+  const hasVariants = (data.product_variants ?? []).length > 0;
+  const variants = (data.product_variants ?? [])
+    .filter((v) => v.available && Number(v.stock) > 0)
+    .map((v) => ({ ...v, price: Number(v.price), stock: Number(v.stock) }));
   const images =
     (data.product_images ?? [])
       .slice()
@@ -207,27 +223,31 @@ export async function getCatalogProductBySlug(
 
   const sizes = Array.from(
     new Set(
-      (data.product_variants ?? [])
+      variants
         .map((variant) => variant.size)
-        .filter((size): size is string => Boolean(size))
-    )
+        .filter((size): size is string => Boolean(size)),
+    ),
   );
   const colors = Array.from(
     new Set(
-      (data.product_variants ?? [])
+      variants
         .map((variant) => variant.color)
-        .filter((color): color is string => Boolean(color))
-    )
+        .filter((color): color is string => Boolean(color)),
+    ),
   );
 
   return {
+    hasVariants,
+    variants,
     id: data.id,
     slug: data.slug,
     name: data.name,
     description: data.description,
     tagline: data.tagline ?? [],
     specs: data.specs ?? [],
-    price: Number(data.price),
+    price: variants.length
+      ? Math.min(...variants.map((v) => v.price))
+      : Number(data.price),
     compareAtPrice:
       data.compare_at_price === null || data.compare_at_price === undefined
         ? null
@@ -238,18 +258,20 @@ export async function getCatalogProductBySlug(
     thumbnails: images,
     sizes,
     colors,
-    available: Number(data.stock) > 0 || (data.product_variants?.length ?? 0) > 0,
+    available: Number(data.stock) > 0 && (!hasVariants || variants.length > 0),
     stock: Number(data.stock),
   };
 }
 
 export async function searchCatalogProducts(
-  query: string
+  query: string,
 ): Promise<CatalogProduct[] | null> {
   return getCatalogProducts({ query, limit: 40 });
 }
 
-export async function getCatalogCategories(): Promise<CatalogCategory[] | null> {
+export async function getCatalogCategories(): Promise<
+  CatalogCategory[] | null
+> {
   const supabase = await createClient();
   if (!supabase) return null;
 
@@ -262,4 +284,3 @@ export async function getCatalogCategories(): Promise<CatalogCategory[] | null> 
   if (error || !data) return null;
   return data as CatalogCategory[];
 }
-

@@ -18,7 +18,7 @@ export type ProfileState = {
  */
 export async function updateProfile(
   prevState: ProfileState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<ProfileState> {
   const fullName = String(formData.get("full_name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim() || null;
@@ -29,22 +29,34 @@ export async function updateProfile(
 
   const supabase = await createClient();
   if (!supabase) {
-    return { error: "Supabase is not configured. Please refresh and try again.", success: false };
+    return {
+      error: "Supabase is not configured. Please refresh and try again.",
+      success: false,
+    };
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { error: "You must be signed in to update your profile.", success: false };
+    return {
+      error: "You must be signed in to update your profile.",
+      success: false,
+    };
   }
 
   const customer = await getOrCreateCustomer(user);
   if (!customer) {
-    return { error: "We couldn't load your customer account. Please try again.", success: false };
+    return {
+      error: "We couldn't load your customer account. Please try again.",
+      success: false,
+    };
   }
 
-  const result = await updateCustomerProfile(customer.id, { full_name: fullName, phone });
+  const result = await updateCustomerProfile(customer.id, {
+    full_name: fullName,
+    phone,
+  });
   if (result.error) {
     return { error: result.error, success: false };
   }
@@ -60,6 +72,6 @@ export async function customerSignOut(): Promise<void> {
   const supabase = await createClient();
   if (!supabase) return;
 
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/");
 }

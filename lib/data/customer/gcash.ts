@@ -1,4 +1,6 @@
 import "server-only";
+import { getUser } from "@/lib/supabase/server";
+import { paymentProofUrl } from "@/lib/storage/proofs";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -6,7 +8,10 @@ import {
   type GcashSettingsRow,
   type QueryResult,
 } from "@/lib/data/types";
-import { missingServiceRoleMessage, toFriendlyDbError } from "@/lib/data/admin/errors";
+import {
+  missingServiceRoleMessage,
+  toFriendlyDbError,
+} from "@/lib/data/admin/errors";
 
 /**
  * Customer-side GCash payment data access.
@@ -55,7 +60,7 @@ export async function getGcashSettings(): Promise<GcashSettingsRow | null> {
  */
 export async function getGcashOrderForCustomer(
   orderNumber: string,
-  customerId: string
+  customerId: string,
 ): Promise<GcashOrderLookup | null> {
   const supabase = await createClient();
   if (!supabase) return null;
@@ -76,7 +81,7 @@ export async function getGcashOrderForCustomer(
  * RLS (`gcash_payments_select_own`) keeps this scoped to their own order.
  */
 export async function getGcashPaymentForOrder(
-  orderId: string
+  orderId: string,
 ): Promise<GcashPaymentRow | null> {
   const supabase = await createClient();
   if (!supabase) return null;
@@ -84,13 +89,17 @@ export async function getGcashPaymentForOrder(
   const { data } = await supabase
     .from("gcash_payments")
     .select(
-      "id, order_id, sender_name, phone_number, reference_number, screenshot_url, status, rejection_reason, created_at, reviewed_at, reviewed_by"
+      "id, order_id, sender_name, phone_number, reference_number, screenshot_url, status, rejection_reason, created_at, reviewed_at, reviewed_by",
     )
     .eq("order_id", orderId)
     .maybeSingle();
 
   if (!data) return null;
-  return data as GcashPaymentRow;
+  const payment = data as GcashPaymentRow;
+  return {
+    ...payment,
+    screenshot_url: await paymentProofUrl(payment.screenshot_url),
+  };
 }
 
 export type SubmitGcashPaymentInput = {
@@ -109,64 +118,22 @@ export type SubmitGcashPaymentInput = {
  *   * no payment has already been submitted for this order (duplicate guard).
  */
 export async function submitGcashPayment(
-  input: SubmitGcashPaymentInput
+  input: SubmitGcashPaymentInput,
 ): Promise<QueryResult<null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
 
-  const { data: order } = await admin
-    .from("orders")
-    .select("id, customer_id, payment_method, payment_status")
-    .eq("id", input.orderId)
-    .maybeSingle();
-
-  if (!order) {
-    return { data: null, error: "This order could not be found." };
-  }
-  const orderRow = order as {
-    id: string;
-    customer_id: string | null;
-    payment_method: string;
-    payment_status: string;
-  };
-
-  if (orderRow.customer_id !== input.customerId) {
-    return { data: null, error: "You can only submit payment for your own order." };
-  }
-  if (orderRow.payment_method !== "gcash") {
-    return { data: null, error: "This order was not placed with GCash." };
-  }
-  if (orderRow.payment_status !== "pending") {
-    return {
-      data: null,
-      error:
-        "This order's payment has already been reviewed and can no longer be submitted.",
-    };
-  }
-
-  const { data: existing } = await admin
-    .from("gcash_payments")
-    .select("id")
-    .eq("order_id", input.orderId)
-    .maybeSingle();
-  if (existing) {
-    return {
-      data: null,
-      error: "A payment for this order has already been submitted and is under review.",
-    };
-  }
-
-  const { error } = await admin.from("gcash_payments").insert({
-    order_id: input.orderId,
-    sender_name: input.senderName.trim(),
-    phone_number: input.phoneNumber.trim(),
-    reference_number: input.referenceNumber?.trim() || null,
-    screenshot_url: input.screenshotUrl,
-    status: "pending",
+  const user = await getUser();
+  if (!user) return { data: null, error: "Sign in with a customer account." };
+  const { error } = await admin.rpc("lnr_submit_order_payment", {
+    p_user: user.id,
+    p_order: input.orderId,
+    p_name: input.senderName,
+    p_phone: input.phoneNumber,
+    p_reference: input.referenceNumber,
+    p_proof: input.screenshotUrl,
   });
-
-  if (error) return { data: null, error: toFriendlyDbError(error) };
-  return { data: null, error: null };
+  return { data: null, error: error ? toFriendlyDbError(error) : null };
 }
 
 /**

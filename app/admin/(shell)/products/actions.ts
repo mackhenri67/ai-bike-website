@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { getUser } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/guards";
 import {
   createProduct,
   deleteProduct,
@@ -13,19 +12,13 @@ import type { ProductInput } from "@/lib/data/types";
 /**
  * Server-only admin backend for the Products page. Every mutation runs with
  * the service-role client (lib/supabase/admin.ts) after confirming the
- * caller is signed in — the browser never holds write privileges.
+ * caller has the administrator role — the browser never holds write privileges.
  *
  * Returns `{ error }` so the client manager can surface friendly messages;
  * `revalidatePath` keeps the admin list and the storefront in sync.
  */
-async function requireAdmin() {
-  const user = await getUser();
-  if (!user) redirect("/admin/login");
-  return user;
-}
-
 export async function saveProductAction(
-  input: ProductInput
+  input: ProductInput,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
 
@@ -54,7 +47,7 @@ export async function saveProductAction(
 }
 
 export async function deleteProductAction(
-  id: string
+  id: string,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
 
@@ -71,6 +64,6 @@ export async function deleteProductAction(
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-    value
+    value,
   );
 }

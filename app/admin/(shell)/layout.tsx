@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
-import { getUser } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/guards";
 import AdminLayout from "@/components/admin/AdminLayout";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +23,7 @@ export default async function AdminShellLayout({
 }: {
   children: ReactNode;
 }) {
-  const user = await getUser();
-
-  if (!user) {
-    redirect("/admin/login");
-  }
+  const user = await requireAdmin();
 
   return <AdminLayout user={user}>{children}</AdminLayout>;
 }

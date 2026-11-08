@@ -289,10 +289,10 @@ export default function OrdersManager({
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <colgroup>
-            {COLUMN_WIDTHS.map((width) => (
-              <col key={width} style={{ width: `${width}%` }} />
-            ))}
-          </colgroup>
+            {COLUMN_WIDTHS.map((width, index) => (
+                    <col key={`order-column-${index}`} style={{ width: `${width}%` }} />
+       ))}
+</colgroup>
           <thead>
             <tr>
               <th>Order ID</th>

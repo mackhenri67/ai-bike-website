@@ -25,10 +25,12 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export async function customerSignUp(
   prevState: SignUpState | undefined,
-  formData: FormData
+  formData: FormData,
 ): Promise<SignUpState> {
   const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") ?? "");
   const phone = String(formData.get("phone") ?? "").trim() || null;
   // Direct /signup visits default to the profile; the cart/checkout flow
@@ -40,18 +42,39 @@ export async function customerSignUp(
   const latitude = Number(formData.get("latitude") ?? NaN);
   const longitude = Number(formData.get("longitude") ?? NaN);
 
-  if (!fullName) return { error: "Please enter your full name.", needsEmailConfirmation: false, message: null };
+  if (!fullName)
+    return {
+      error: "Please enter your full name.",
+      needsEmailConfirmation: false,
+      message: null,
+    };
   if (!EMAIL_PATTERN.test(email)) {
-    return { error: "Please enter a valid email address.", needsEmailConfirmation: false, message: null };
+    return {
+      error: "Please enter a valid email address.",
+      needsEmailConfirmation: false,
+      message: null,
+    };
   }
   if (password.length < 8) {
-    return { error: "Password must be at least 8 characters long.", needsEmailConfirmation: false, message: null };
+    return {
+      error: "Password must be at least 8 characters long.",
+      needsEmailConfirmation: false,
+      message: null,
+    };
   }
   if (!address) {
-    return { error: "Please set and confirm your delivery location.", needsEmailConfirmation: false, message: null };
+    return {
+      error: "Please set and confirm your delivery location.",
+      needsEmailConfirmation: false,
+      message: null,
+    };
   }
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return { error: "Please set and confirm your delivery location.", needsEmailConfirmation: false, message: null };
+    return {
+      error: "Please set and confirm your delivery location.",
+      needsEmailConfirmation: false,
+      message: null,
+    };
   }
 
   const supabase = await createClient();
@@ -68,6 +91,7 @@ export async function customerSignUp(
     email,
     password,
     options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
       data: {
         full_name: fullName,
         phone: phone ?? undefined,
@@ -84,13 +108,18 @@ export async function customerSignUp(
       /already registered/i.test(error.message)
     ) {
       return {
-        error: "An account with this email already exists. Please log in instead.",
+        error:
+          "An account with this email already exists. Please log in instead.",
         needsEmailConfirmation: false,
         message: null,
       };
     }
 
-    return { error: error.message, needsEmailConfirmation: false, message: null };
+    return {
+      error: error.message,
+      needsEmailConfirmation: false,
+      message: null,
+    };
   }
 
   const authUserId = data.user?.id;
@@ -140,7 +169,11 @@ export async function customerSignUp(
     longitude,
   });
   if (locationResult.error) {
-    return { error: locationResult.error, needsEmailConfirmation: false, message: null };
+    return {
+      error: locationResult.error,
+      needsEmailConfirmation: false,
+      message: null,
+    };
   }
 
   if (data.session) {

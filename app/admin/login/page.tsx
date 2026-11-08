@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { getUser } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/auth/roles";
+import { getAdminUser } from "@/lib/supabase/server";
 import LoginForm from "./login-form";
 import styles from "./page.module.css";
 
@@ -13,10 +14,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLoginPage() {
-  const user = await getUser();
+  const user = await getAdminUser();
 
   // Already signed in? Go straight to the admin area.
-  if (user) {
+  if (isAdmin(user)) {
     redirect("/admin");
   }
 

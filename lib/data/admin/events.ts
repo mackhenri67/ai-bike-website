@@ -1,11 +1,15 @@
 import "server-only";
+import { paymentProofUrl } from "@/lib/storage/proofs";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type {
   EventRegistrationRow,
   EventRow,
   QueryResult,
 } from "@/lib/data/types";
-import { missingServiceRoleMessage, toFriendlyDbError } from "@/lib/data/admin/errors";
+import {
+  missingServiceRoleMessage,
+  toFriendlyDbError,
+} from "@/lib/data/admin/errors";
 
 const EVENT_SELECT = `
   id, event_code, slug, title, category, description, event_date, end_date,
@@ -16,7 +20,7 @@ const EVENT_SELECT = `
 const REGISTRATION_SELECT = `
   id, registration_code, event_id, customer_id, customer_name, customer_email,
   customer_phone, rider_name, plate_number, category, amount_paid,
-  payment_method, payment_status, status, proof_screenshot_url,
+  payment_method, payment_status, status, proof_screenshot_url, reference_number, payment_sender_name, payment_phone_number,
   rejection_reason, reviewed_at, reviewed_by, created_at, updated_at,
   event:events(id, slug, title, category, event_date, location, banner_image_url)
 `;
@@ -36,7 +40,7 @@ export async function listAdminEvents(): Promise<QueryResult<EventRow[]>> {
 }
 
 export async function getAdminEvent(
-  id: string
+  id: string,
 ): Promise<QueryResult<EventRow | null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
@@ -76,7 +80,7 @@ function makeEventCode(): string {
 
 /** Creates or updates an event. Service-role write. */
 export async function upsertEvent(
-  input: UpsertEventInput
+  input: UpsertEventInput,
 ): Promise<QueryResult<EventRow>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
@@ -124,14 +128,15 @@ export async function upsertEvent(
     result = await admin.from("events").insert(payload).select().single();
   }
 
-  if (result.error) return { data: null, error: toFriendlyDbError(result.error) };
+  if (result.error)
+    return { data: null, error: toFriendlyDbError(result.error) };
   return { data: result.data as EventRow, error: null };
 }
 
 /** Updates only the status of an event (publish/unpublish/cancel). */
 export async function updateEventStatus(
   id: string,
-  status: EventRow["status"]
+  status: EventRow["status"],
 ): Promise<QueryResult<EventRow | null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
@@ -169,11 +174,18 @@ export async function listAllRegistrations(): Promise<
     .order("created_at", { ascending: false });
 
   if (error) return { data: null, error: toFriendlyDbError(error) };
-  return { data: (data as unknown as EventRegistrationRow[]) ?? [], error: null };
+  return {
+    data: await Promise.all(
+      ((data as unknown as EventRegistrationRow[]) ?? []).map(
+        signedRegistration,
+      ),
+    ),
+    error: null,
+  };
 }
 
 export async function getRegistrationByCode(
-  code: string
+  code: string,
 ): Promise<QueryResult<EventRegistrationRow | null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
@@ -185,7 +197,12 @@ export async function getRegistrationByCode(
     .maybeSingle();
 
   if (error) return { data: null, error: toFriendlyDbError(error) };
-  return { data: (data as unknown as EventRegistrationRow) ?? null, error: null };
+  return {
+    data: data
+      ? await signedRegistration(data as unknown as EventRegistrationRow)
+      : null,
+    error: null,
+  };
 }
 
 /** Reviews a customer's GCash payment for an event registration. */
@@ -198,34 +215,37 @@ export async function reviewRegistrationPayment(input: {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
 
-  const { error } = await admin
-    .from("event_registrations")
-    .update({
-      payment_status: input.decision,
-      rejection_reason:
-        input.decision === "rejected" ? input.reason?.trim() || null : null,
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: input.reviewerId,
-    })
-    .eq("id", input.registrationId);
-
-  if (error) return { data: null, error: toFriendlyDbError(error) };
-  return { data: null, error: null };
+  const { error } = await admin.rpc("lnr_review_event_payment", {
+    p_registration: input.registrationId,
+    p_decision: input.decision,
+    p_admin: input.reviewerId,
+    p_reason: input.reason ?? null,
+  });
+  return { data: null, error: error ? toFriendlyDbError(error) : null };
 }
 
 export async function updateRegistrationStatus(
   registrationId: string,
-  status: EventRegistrationRow["status"]
+  status: EventRegistrationRow["status"],
+  adminId: string,
 ): Promise<QueryResult<null>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
 
-  const { error } = await admin
-    .from("event_registrations")
-    .update({ status })
-    .eq("id", registrationId);
-
-  if (error) return { data: null, error: toFriendlyDbError(error) };
-  return { data: null, error: null };
+  const { error } = await admin.rpc("lnr_set_registration_status", {
+    p_registration: registrationId,
+    p_status: status,
+    p_admin: adminId,
+  });
+  return { data: null, error: error ? toFriendlyDbError(error) : null };
 }
-
+async function signedRegistration(
+  row: EventRegistrationRow,
+): Promise<EventRegistrationRow> {
+  return {
+    ...row,
+    proof_screenshot_url: row.proof_screenshot_url
+      ? await paymentProofUrl(row.proof_screenshot_url)
+      : null,
+  };
+}

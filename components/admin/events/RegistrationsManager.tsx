@@ -51,9 +51,8 @@ export default function RegistrationsManager({
   initialRegistrations,
   error: initialError,
 }: RegistrationsManagerProps) {
-  const [registrations, setRegistrations] = useState<EventRegistrationRow[]>(
-    initialRegistrations
-  );
+  const [registrations, setRegistrations] =
+    useState<EventRegistrationRow[]>(initialRegistrations);
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("all");
   const [reviewing, setReviewing] = useState<EventRegistrationRow | null>(null);
@@ -100,7 +99,7 @@ export default function RegistrationsManager({
     const result = await reviewRegistrationAction(
       reviewing.id,
       decision,
-      decision === "rejected" ? rejectReason || null : null
+      decision === "rejected" ? rejectReason || null : null,
     );
     if (result.error) {
       setActionError(result.error);
@@ -117,8 +116,8 @@ export default function RegistrationsManager({
               rejection_reason:
                 decision === "rejected" ? rejectReason || null : null,
             }
-          : reg
-      )
+          : reg,
+      ),
     );
     setBusy(false);
     closeReview();
@@ -126,7 +125,7 @@ export default function RegistrationsManager({
 
   const handleStatus = async (
     reg: EventRegistrationRow,
-    status: RegistrationStatus
+    status: RegistrationStatus,
   ) => {
     setActionError(null);
     const result = await updateRegistrationStatusAction(reg.id, status);
@@ -136,7 +135,7 @@ export default function RegistrationsManager({
     }
     const targetId = reg.id;
     setRegistrations((current) =>
-      current.map((r) => (r.id === targetId ? { ...r, status } : r))
+      current.map((r) => (r.id === targetId ? { ...r, status } : r)),
     );
   };
 
@@ -212,7 +211,9 @@ export default function RegistrationsManager({
                         className={styles.viewButton}
                         onClick={() => openReview(reg)}
                       >
-                        {reg.payment_status === "paid" ? "View" : "Review Payment"}
+                        {reg.payment_status === "paid"
+                          ? "View"
+                          : "Review Payment"}
                       </button>
                       {reg.status === "registered" ? (
                         <button
@@ -280,7 +281,14 @@ export default function RegistrationsManager({
               ) : null}
             </dl>
 
-
+            <dl>
+              <dt>GCash sender</dt>
+              <dd>{reviewing.payment_sender_name || "—"}</dd>
+              <dt>GCash phone</dt>
+              <dd>{reviewing.payment_phone_number || "—"}</dd>
+              <dt>Payment reference</dt>
+              <dd>{reviewing.reference_number || "—"}</dd>
+            </dl>
             {reviewing.proof_screenshot_url ? (
               <div className={styles.proof}>
                 <span className={styles.proofLabel}>Payment screenshot</span>
@@ -374,4 +382,3 @@ export default function RegistrationsManager({
     </div>
   );
 }
-

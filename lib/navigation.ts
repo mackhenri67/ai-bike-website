@@ -1,19 +1,22 @@
-/**
- * Small navigation helpers shared by the customer auth pages.
- */
-
-/**
- * Returns a safe in-app path from a `next` query parameter. Only allows
- * same-origin paths starting with a single "/" so a crafted value cannot
- * become an open redirect (e.g. "//evil.com" or "https://evil.com").
- */
+/** Accept a local destination without allowing backslash/control-character redirects. */
 export function sanitizeNext(
   value: string | null | undefined,
-  fallback = "/checkout"
+  fallback = "/checkout",
 ): string {
   const candidate = (value ?? "").trim();
-  if (!candidate.startsWith("/") || candidate.startsWith("//")) {
+  if (
+    !candidate.startsWith("/") ||
+    candidate.startsWith("//") ||
+    candidate.includes("\\") ||
+    /[\u0000-\u001f\u007f]/.test(candidate)
+  )
+    return fallback;
+  try {
+    const url = new URL(candidate, "https://lnr.invalid");
+    return url.origin === "https://lnr.invalid"
+      ? url.pathname + url.search + url.hash
+      : fallback;
+  } catch {
     return fallback;
   }
-  return candidate;
 }

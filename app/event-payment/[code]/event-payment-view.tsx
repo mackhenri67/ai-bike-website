@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useActionState, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { uploadPaymentProof } from "@/lib/storage/upload-proof";
 import type { GcashSettingsRow } from "@/lib/data/types";
 import { submitEventGcashPaymentAction } from "./action";
 import styles from "./payment.module.css";
@@ -12,6 +12,10 @@ type Props = {
   eventTitle: string;
   amount: number;
   settings: GcashSettingsRow | null;
+  paymentStatus?: string;
+  submittedProof?: string | null;
+  rejectionReason?: string | null;
+  paymentReference?: string | null;
 };
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg"];
@@ -30,10 +34,14 @@ export default function EventPaymentView({
   eventTitle,
   amount,
   settings,
+  paymentStatus,
+  submittedProof,
+  rejectionReason,
+  paymentReference,
 }: Props) {
   const [state, formAction, pending] = useActionState(
     submitEventGcashPaymentAction,
-    { error: null, success: false }
+    { error: null, success: false },
   );
   const [preview, setPreview] = useState<string | null>(null);
   const [screenshotUrl, setScreenshotUrl] = useState("");
@@ -49,12 +57,30 @@ export default function EventPaymentView({
         <h2 className={styles.successTitle}>Payment submitted</h2>
         <p className={styles.successText}>
           Thanks! We&apos;ll verify your GCash payment for{" "}
-          <strong>{eventTitle}</strong> and email you once it&apos;s confirmed.
-          You can track the status in <Link href="/my-events">My Events</Link>.
+          <strong>{eventTitle}</strong> and update its status after review. You
+          can track the status in <Link href="/my-events">My Events</Link>.
         </p>
         <Link href="/my-events" className={styles.payButton}>
           View my events
         </Link>
+      </div>
+    );
+  }
+
+  if (paymentStatus === "pending" && submittedProof) {
+    return (
+      <div className={styles.successCard}>
+        <h2>Payment awaiting review</h2>
+        <p>Reference: {paymentReference || "Not supplied"}</p>
+        <p>
+          Your screenshot has been submitted. Track the result in My Events.
+        </p>
+        <img
+          src={submittedProof}
+          alt="Your submitted payment proof"
+          style={{ maxWidth: "100%", maxHeight: 360 }}
+        />
+        <Link href="/my-events">My Events</Link>
       </div>
     );
   }
@@ -69,7 +95,9 @@ export default function EventPaymentView({
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setUploadError("The screenshot is larger than 10MB. Please choose a smaller image.");
+      setUploadError(
+        "The screenshot is larger than 10MB. Please choose a smaller image.",
+      );
       return;
     }
 
@@ -82,32 +110,15 @@ export default function EventPaymentView({
     setUploading(true);
 
     try {
-      const client = getBrowserClient();
-      if (!client) {
-        throw new Error("Supabase is not configured. Please refresh and try again.");
-      }
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const path = `gcash-proofs/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
-      const { data, error } = await client.storage
-        .from("images")
-        .upload(path, file, {
-          contentType: file.type || "image/*",
-          cacheControl: "3600",
-          upsert: false,
-        });
-      if (error) {
-        throw new Error(
-          `Upload failed: ${error.message}. Make sure you are signed in and try again.`
-        );
-      }
-      const { data: urlData } = client.storage.from("images").getPublicUrl(data.path);
-      setScreenshotUrl(urlData.publicUrl);
+      setScreenshotUrl(
+        await uploadPaymentProof(file, "events", registrationCode),
+      );
     } catch (err) {
       setUploadError(
-        err instanceof Error ? err.message : "Upload failed. Please try again."
+        err instanceof Error ? err.message : "Upload failed. Please try again.",
       );
       setPreview(null);
-      setScreenshotUrl("")  ; 
+      setScreenshotUrl("");
     } finally {
       setUploading(false);
     }
@@ -139,7 +150,11 @@ export default function EventPaymentView({
       {settings?.qr_code_url ? (
         <div className={styles.qrBlock}>
           <p className={styles.qrCaption}>Scan this QR code with GCash</p>
-          <img src={settings.qr_code_url} alt="Merchant GCash QR code" className={styles.qr} />
+          <img
+            src={settings.qr_code_url}
+            alt="Merchant GCash QR code"
+            className={styles.qr}
+          />
           {settings.gcash_number ? (
             <p className={styles.gcashNumber}>
               GCash number: <strong>{settings.gcash_number}</strong>
@@ -153,23 +168,44 @@ export default function EventPaymentView({
         </p>
       )}
 
-      <form action={formAction} onSubmit={handleSubmit} className={styles.form} noValidate>
-        <input type="hidden" name="registration_code" value={registrationCode} />
+      <form
+        action={formAction}
+        onSubmit={handleSubmit}
+        className={styles.form}
+        noValidate
+      >
+        <input
+          type="hidden"
+          name="registration_code"
+          value={registrationCode}
+        />
         <input type="hidden" name="screenshot_url" value={screenshotUrl} />
 
         <label className={styles.field}>
           <span className={styles.label}>Sender name *</span>
-          <input name="sender_name" className={styles.input} placeholder="Name on the GCash account" />
+          <input
+            name="sender_name"
+            className={styles.input}
+            placeholder="Name on the GCash account"
+          />
         </label>
 
         <label className={styles.field}>
           <span className={styles.label}>GCash number *</span>
-          <input name="phone_number" className={styles.input} placeholder="09XX XXX XXXX" />
+          <input
+            name="phone_number"
+            className={styles.input}
+            placeholder="09XX XXX XXXX"
+          />
         </label>
 
         <label className={styles.field}>
           <span className={styles.label}>Reference number</span>
-          <input name="reference_number" className={styles.input} placeholder="Optional" />
+          <input
+            name="reference_number"
+            className={styles.input}
+            placeholder="Optional"
+          />
         </label>
 
         <label className={styles.field}>
@@ -187,7 +223,11 @@ export default function EventPaymentView({
             <p className={styles.uploadHint}>Uploading screenshot…</p>
           ) : null}
           {preview ? (
-            <img src={preview} alt="Payment screenshot preview" className={styles.preview} />
+            <img
+              src={preview}
+              alt="Payment screenshot preview"
+              className={styles.preview}
+            />
           ) : null}
         </label>
 
@@ -203,8 +243,16 @@ export default function EventPaymentView({
           </p>
         ) : null}
 
-        <button type="submit" className={styles.payButton} disabled={!canSubmit}>
-          {pending ? "Submitting…" : uploading ? "Uploading…" : "Submit payment"}
+        <button
+          type="submit"
+          className={styles.payButton}
+          disabled={!canSubmit}
+        >
+          {pending
+            ? "Submitting…"
+            : uploading
+              ? "Uploading…"
+              : "Submit payment"}
         </button>
       </form>
     </div>

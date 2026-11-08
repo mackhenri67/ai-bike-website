@@ -21,6 +21,8 @@ import {
   type AddToCartInput,
   type CartItem,
 } from "./cart-store";
+import { usePathname } from "next/navigation";
+import { isAdmin } from "@/lib/auth/roles";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { loadCustomerCart, saveCustomerCart } from "@/app/cart/actions";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -43,6 +45,8 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const refreshSessionRef = useRef<(() => void) | null>(null);
   // Hydration-safe: render the defaults (which is also what SSR prerenders),
   // then restore a previously persisted cart in an effect. The one-time default
   // write that follows in the save effect is immediately overwritten with the
@@ -95,6 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
+    let authVersion = 0;
 
     const restoreAccountCart = async (userId: string) => {
       if (lastLoadedUserIdRef.current === userId) return;
@@ -106,7 +111,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch {
         // Load failed — keep the current local cart below.
       }
-      if (cancelled) return;
+      if (cancelled || lastLoadedUserIdRef.current !== userId) return;
 
       if (saved && saved.length > 0) {
         // The account has a saved cart — it is the source of truth.
@@ -127,29 +132,54 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      if (!cancelled) setSyncReady(true);
+      if (!cancelled && lastLoadedUserIdRef.current === userId)
+        setSyncReady(true);
     };
 
     const handleSession = (userId: string | null) => {
+      const previous = lastLoadedUserIdRef.current;
+      if (previous !== userId) {
+        setSyncReady(false);
+        if (previous) {
+          itemsRef.current = [];
+          setItems([]);
+        }
+      }
+      if (!userId) lastLoadedUserIdRef.current = null;
       setSession(userId ? { userId } : null);
       if (userId) void restoreAccountCart(userId);
     };
 
-    // Initial session, then live auth changes.
-    client.auth.getSession().then(
-      ({ data }: { data: { session: Session | null } }) => {
-        if (!cancelled) handleSession(data.session?.user?.id ?? null);
-      }
-    );
+    // Server Actions change cookies without a browser SIGNED_IN event.
+    // Re-reading on navigation also restores saved carts after those logins.
+    const refresh = () => {
+      const version = authVersion;
+      void client!.auth
+        .getSession()
+        .then(({ data }: { data: { session: Session | null } }) => {
+          if (!cancelled && version === authVersion)
+            handleSession(
+              isAdmin(data.session?.user)
+                ? null
+                : (data.session?.user.id ?? null),
+            );
+        })
+        .catch(() => {});
+    };
+    refreshSessionRef.current = refresh;
+    refresh();
 
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange(
       (event: AuthChangeEvent, currentSession: Session | null) => {
+        if (cancelled) return;
+        authVersion++;
         if (event === "SIGNED_OUT") {
           // Clear the client cart so the signed-out user can no longer see or
           // use the previous customer's items. The saved DB cart is untouched.
           lastLoadedUserIdRef.current = null;
+          itemsRef.current = [];
           setSyncReady(false);
           setSession(null);
           setItems([]);
@@ -158,17 +188,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
           } catch {
             // Ignore storage failures — state is already cleared.
           }
-        } else if (currentSession?.user?.id) {
-          handleSession(currentSession.user.id);
+        } else {
+          handleSession(
+            isAdmin(currentSession?.user)
+              ? null
+              : (currentSession?.user.id ?? null),
+          );
         }
-      }
+      },
     );
 
     return () => {
       cancelled = true;
+      refreshSessionRef.current = null;
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    refreshSessionRef.current?.();
+  }, [pathname]);
 
   // Persist the cart: always to localStorage (guest + signed in), and to the
   // signed-in customer's saved cart when authenticated.
@@ -221,7 +260,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const badgeCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
-    [items]
+    [items],
   );
 
   const value = useMemo<CartContextValue>(
@@ -236,7 +275,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem: remove,
       clearCart: clear,
     }),
-    [items, badgeCount, addItem, toggleSelection, toggleAll, increment, decrement, remove, clear]
+    [
+      items,
+      badgeCount,
+      addItem,
+      toggleSelection,
+      toggleAll,
+      increment,
+      decrement,
+      remove,
+      clear,
+    ],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

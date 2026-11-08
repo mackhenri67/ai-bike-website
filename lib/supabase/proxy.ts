@@ -1,67 +1,48 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "./config";
-
-/**
- * Session helper for the Next.js 16 `proxy.ts` file.
- *
- * - Refreshes the Supabase auth cookie on every matching request.
- * - Redirects unauthenticated visitors away from /admin pages.
- * - Redirects authenticated users away from /admin/login.
- */
+import { SESSION_COOKIES } from "@/lib/auth/session";
+import { isAdmin } from "@/lib/auth/roles";
 export async function updateSession(request: NextRequest) {
-  const config = getSupabaseConfig();
-
-  // The final response object, mutated when cookies are refreshed.
   let response = NextResponse.next({ request });
-
-  // Without config (e.g. during development setup) we skip all
-  // auth guards so the app can still be browsed/rendered.
-  if (!config) {
-    return response;
-  }
-
-  const supabase = createServerClient(config.url, config.anonKey, {
+  const config = getSupabaseConfig();
+  if (!config) return response;
+  const path = request.nextUrl.pathname;
+  const adminArea = path === "/admin" || path.startsWith("/admin/");
+  const client = createServerClient(config.url, config.anonKey, {
+    cookieOptions: { name: SESSION_COOKIES[adminArea ? "admin" : "customer"] },
     cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
+      getAll: () => request.cookies.getAll(),
+      setAll(values) {
+        values.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
+        values.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
         );
       },
     },
   });
-
   const {
     data: { user },
-  } = await supabase.auth.getUser();
-
-  const { pathname, searchParams } = request.nextUrl;
-
-  if (!user && pathname.startsWith("/admin") && pathname !== "/admin/login") {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/admin/login";
-
-    // Preserve the intended destination so we can return here after
-    // a successful sign in.
-    const next = pathname + (searchParams.toString() ? `?${searchParams}` : "");
-    loginUrl.searchParams.set("next", next);
-
-    return NextResponse.redirect(loginUrl);
+  } = await client.auth.getUser();
+  const go = (url: URL) => {
+    const result = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => result.cookies.set(cookie));
+    return result;
+  };
+  const authPage = path === "/admin/login" || path === "/admin/reset-password";
+  if (adminArea && !authPage && !isAdmin(user)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin/login";
+    url.search = "";
+    url.searchParams.set("next", path + request.nextUrl.search);
+    return go(url);
   }
-
-  if (user && pathname === "/admin/login") {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/admin";
-    dashboardUrl.search = "";
-    return NextResponse.redirect(dashboardUrl);
+  if (path === "/admin/login" && isAdmin(user)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin";
+    url.search = "";
+    return go(url);
   }
-
   return response;
 }

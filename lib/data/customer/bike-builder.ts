@@ -1,6 +1,9 @@
 import "server-only";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { missingServiceRoleMessage, toFriendlyDbError } from "@/lib/data/admin/errors";
+import {
+  missingServiceRoleMessage,
+  toFriendlyDbError,
+} from "@/lib/data/admin/errors";
 import { type QueryResult } from "@/lib/data/types";
 
 /**
@@ -23,7 +26,17 @@ export type BuilderAxis = {
   options: string[];
 };
 
+export type BuilderVariant = {
+  id: string;
+  size: string | null;
+  color: string | null;
+  price: number;
+  stock: number;
+  available: boolean;
+};
 export type BuilderProduct = {
+  catalogueStock?: number;
+  variants?: BuilderVariant[];
   id: string;
   name: string;
   slug: string;
@@ -49,6 +62,7 @@ export type BuilderStep = {
 // here so the mapping below stays fully typed (no `any`).
 type ImageRow = { url: string; sort_order: number; is_primary: boolean };
 type BuilderProductRow = {
+  product_variants?: BuilderVariant[];
   id: string;
   name: string;
   slug: string;
@@ -94,27 +108,40 @@ function asArray<T>(value: T[] | T | null | undefined): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
-function primaryImage(
-  images: ImageRow[] | ImageRow | null
-): string | null {
+function primaryImage(images: ImageRow[] | ImageRow | null): string | null {
   const list = asArray(images).sort((a, b) => a.sort_order - b.sort_order);
   const primary = list.find((image) => image.is_primary) ?? list[0];
   return primary?.url ?? null;
 }
 
 function mapProduct(raw: BuilderProductRow): BuilderProduct {
+  const variants = (raw.product_variants ?? []).map((v) => ({
+    ...v,
+    price: Number(v.price),
+    stock: Number(v.stock),
+  }));
+  const available = variants.filter((v) => v.available && v.stock > 0);
   return {
+    variants,
+    catalogueStock: Number(raw.stock ?? 0),
     id: String(raw.id),
     name: raw.name,
     slug: raw.slug,
     description: raw.description ?? null,
     specs: raw.specs ?? [],
-    price: Number(raw.price),
+    price: available.length
+      ? Math.min(...available.map((v) => v.price))
+      : Number(raw.price),
     compareAtPrice:
       raw.compare_at_price === null || raw.compare_at_price === undefined
         ? null
         : Number(raw.compare_at_price),
-    stock: Number(raw.stock ?? 0),
+    stock: variants.length
+      ? Math.min(
+          Number(raw.stock ?? 0),
+          available.reduce((n, v) => n + v.stock, 0),
+        )
+      : Number(raw.stock ?? 0),
     image: primaryImage(raw.product_images),
   };
 }
@@ -127,7 +154,9 @@ function mapProduct(raw: BuilderProductRow): BuilderProduct {
 // under that step. The `bike_builder_products` junction table is NOT used.
 // ---------------------------------------------------------------------------
 
-export async function getBikeBuilderSteps(): Promise<QueryResult<BuilderStep[]>> {
+export async function getBikeBuilderSteps(): Promise<
+  QueryResult<BuilderStep[]>
+> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
 
@@ -173,7 +202,7 @@ export async function getBikeBuilderSteps(): Promise<QueryResult<BuilderStep[]>>
 
   if (builderCats && builderCats.length > 0) {
     const catIdToSlug = new Map<string, string>(
-      builderCats.map((c: { id: string; slug: string }) => [c.id, c.slug])
+      builderCats.map((c: { id: string; slug: string }) => [c.id, c.slug]),
     );
     const catIds = [...catIdToSlug.keys()];
 
@@ -181,7 +210,7 @@ export async function getBikeBuilderSteps(): Promise<QueryResult<BuilderStep[]>>
       .from("products")
       .select(
         "id, name, slug, description, specs, price, compare_at_price, stock, category_id," +
-          "product_images(url, sort_order, is_primary)"
+          "product_images(url, sort_order, is_primary),product_variants(id,size,color,price,stock,available)",
       )
       .in("category_id", catIds)
       .eq("status", "active");
@@ -210,4 +239,3 @@ export async function getBikeBuilderSteps(): Promise<QueryResult<BuilderStep[]>>
 
   return { data: steps, error: null };
 }
-

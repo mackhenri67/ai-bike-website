@@ -1,8 +1,10 @@
 "use client";
+import { exchangeRecoveryCode } from "@/lib/auth/recovery";
 
+import { isAdmin } from "@/lib/auth/roles";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getBrowserClient } from "@/lib/supabase/client";
+import { getAdminBrowserClient } from "@/lib/supabase/client";
 import styles from "./page.module.css";
 
 type Stage =
@@ -20,7 +22,7 @@ function ResetPasswordFormInner() {
   // If there is no recovery code in the URL the link is not usable; derived
   // from props instead of set inside the effect (avoids cascading renders).
   const [stage, setStage] = useState<Stage>(
-    code ? { name: "loading" } : { name: "invalid" }
+    code ? { name: "loading" } : { name: "invalid" },
   );
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -34,12 +36,13 @@ function ResetPasswordFormInner() {
       return;
     }
 
+    const recoveryCode = code;
     let cancelled = false;
 
     async function exchange() {
       try {
-        const client = getBrowserClient();
-        const { error } = await client.auth.exchangeCodeForSession(code);
+        const client = getAdminBrowserClient();
+        const { error } = await exchangeRecoveryCode("admin", recoveryCode);
         if (cancelled) return;
 
         if (error) {
@@ -47,6 +50,17 @@ function ResetPasswordFormInner() {
           return;
         }
 
+        const {
+          data: { user },
+        } = await client.auth.getUser();
+        if (cancelled) return;
+        if (!isAdmin(user)) {
+          setStage({
+            name: "error",
+            message: "Use the customer password reset for this account.",
+          });
+          return;
+        }
         setStage({ name: "ready" });
       } catch (err) {
         if (cancelled) return;
@@ -83,12 +97,12 @@ function ResetPasswordFormInner() {
 
     setSubmitting(true);
     try {
-      const client = getBrowserClient();
+      const client = getAdminBrowserClient();
       const { error } = await client.auth.updateUser({ password });
 
       if (error) {
         setFormError(
-          "We couldn't update the password. Your reset link may have expired — request a new one."
+          "We couldn't update the password. Your reset link may have expired — request a new one.",
         );
         return;
       }
@@ -98,7 +112,7 @@ function ResetPasswordFormInner() {
       setFormError(
         err instanceof Error
           ? err.message
-          : "Something went wrong while updating your password."
+          : "Something went wrong while updating your password.",
       );
     } finally {
       setSubmitting(false);

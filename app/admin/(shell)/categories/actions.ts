@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { getUser } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/guards";
 import {
   createCategory,
   deleteCategory,
@@ -10,14 +9,8 @@ import {
 } from "@/lib/data/admin/categories";
 import type { CategoryInput } from "@/lib/data/types";
 
-async function requireAdmin() {
-  const user = await getUser();
-  if (!user) redirect("/admin/login");
-  return user;
-}
-
 export async function saveCategoryAction(
-  input: CategoryInput
+  input: CategoryInput,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
 
@@ -42,7 +35,7 @@ export async function saveCategoryAction(
 }
 
 export async function deleteCategoryAction(
-  id: string
+  id: string,
 ): Promise<{ error: string | null }> {
   await requireAdmin();
 

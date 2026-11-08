@@ -1,27 +1,29 @@
 "use client";
-
 import { createBrowserClient } from "@supabase/ssr";
 import { getSupabaseConfig } from "./config";
-
-let browserClient: ReturnType<typeof createBrowserClient> | null = null;
-
-/**
- * Returns a lazily-created Supabase browser client used inside Client
- * Components. Environment is resolved at call time so the app still
- * renders (and builds) before the .env keys are provided.
- */
-export function getBrowserClient() {
-  if (browserClient) {
-    return browserClient;
-  }
-
+import { SESSION_COOKIES, type SessionArea } from "@/lib/auth/session";
+const clients: Partial<
+  Record<SessionArea, ReturnType<typeof createBrowserClient>>
+> = {};
+function forArea(area: SessionArea) {
+  const cached = clients[area];
+  if (cached) return cached;
   const config = getSupabaseConfig();
-  if (!config) {
+  if (!config)
     throw new Error(
-      "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your environment variables."
+      "Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY first.",
     );
-  }
-
-  browserClient = createBrowserClient(config.url, config.anonKey);
-  return browserClient;
+  const client = createBrowserClient(config.url, config.anonKey, {
+    cookieOptions: { name: SESSION_COOKIES[area] },
+    isSingleton: false,
+    auth: { detectSessionInUrl: false },
+  });
+  clients[area] = client;
+  return client;
+}
+export function getBrowserClient() {
+  return forArea("customer");
+}
+export function getAdminBrowserClient() {
+  return forArea("admin");
 }
