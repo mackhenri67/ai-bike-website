@@ -53,7 +53,7 @@ export default function BikeEquipment({
   categoryCount,
 }: BikeEquipmentProps) {
   const router = useRouter();
-  const [filterOpen, setFilterOpen] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(query);
 
   /** Rebuilds a `/products` URL from the current filters + a patch. */
@@ -107,7 +107,7 @@ export default function BikeEquipment({
       aria-labelledby="bike-equipment-heading"
     >
       <h2 id="bike-equipment-heading" className={styles.visuallyHidden}>
-        Bike equipment catalog
+        Browse products catalog
       </h2>
 {/* --- Toolbar: filter toggle, search, sort ---------------------------- */}
       <div className={styles.toolbar}>

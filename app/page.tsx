@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import CustomerHeader from "@/components/customer/CustomerHeader";
 import HeroCarousel from "@/components/customer/HeroCarousel";
 import ProductSection from "@/components/customer/ProductSection";
-import GallerySection from "@/components/customer/GallerySection";
 import StoreSection from "@/components/customer/StoreSection";
 import CustomBikeSection from "@/components/customer/CustomBikeSection";
 import CustomerFooter from "@/components/customer/CustomerFooter";
@@ -58,7 +57,6 @@ export default async function Home() {
           className={styles.gap}
         />
 
-        <GallerySection />
         <StoreSection />
       </main>
 

@@ -117,7 +117,7 @@ function sortProducts(
 /**
  * Products page at /products \u2014 the destination for the header Products
  * link, the search box (/products?q=...) and every homepage View All
- * button.  Renders the Bike Equipment browsing UI (expandable filter table,
+ * button.  Renders the Browse Products browsing UI (expandable filter table,
  * search, sort, product grid).  Filtering, search and sorting are all
  * URL-param driven and composed server-side.
  */
@@ -202,10 +202,10 @@ export default async function ProductsPage({ searchParams }: Props) {
       <main>
         <section className={styles.section}>
           <div className={styles.container}>
-            {/* Page header — LnR Cycle Center / BIKE EQUIPMENT / description */}
+            {/* Page header — LnR Cycle Center / BROWSE PRODUCTS / description */}
             <header className={styles.header}>
               <p className={styles.eyebrow}>LnR Cycle Center</p>
-              <h1 className={styles.title}>Bike Equipment</h1>
+              <h1 className={styles.title}>Browse Products</h1>
               <p className={styles.description}>
                 Complete bikes, components and accessories everything below is
                 on our shop floor in Tabaco City.
