@@ -82,5 +82,5 @@ export async function submitGcashPaymentAction(
     return { error: result.error };
   }
 
-  redirect(`/gcash-payment/${encodeURIComponent(orderNumber)}`);
+  redirect(`/checkout/success?order=${encodeURIComponent(orderNumber)}`);
 }

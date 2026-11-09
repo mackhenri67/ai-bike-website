@@ -16,6 +16,7 @@ import {
   decrementQuantity,
   incrementQuantity,
   removeItem,
+  removeSelectedItems,
   toggleItemSelection,
   toggleSelectAll,
   type AddToCartInput,
@@ -40,6 +41,7 @@ type CartContextValue = {
   decrementQuantity: (key: string) => void;
   removeItem: (key: string) => void;
   clearCart: () => void;
+  removeSelectedItems: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -254,6 +256,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((current) => removeItem(current, key));
   }, []);
 
+  const removeSelected = useCallback(() => {
+    setItems((current) => removeSelectedItems(current));
+  }, []);
+
   const clear = useCallback(() => {
     setItems([]);
   }, []);
@@ -274,6 +280,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       decrementQuantity: decrement,
       removeItem: remove,
       clearCart: clear,
+      removeSelectedItems: removeSelected,
     }),
     [
       items,
@@ -284,6 +291,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       increment,
       decrement,
       remove,
+      removeSelected,
       clear,
     ],
   );

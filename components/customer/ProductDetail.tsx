@@ -1,5 +1,6 @@
 "use client";
 
+import { saveDirectCheckout } from "./direct-checkout";
 import { optionAxes, optionKey, optionLabel } from "@/lib/product-options";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -23,6 +24,7 @@ export default function ProductDetail({
   product: CatalogProductDetail;
 }) {
   const router = useRouter();
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { addItem } = useCart();
 
   // Products without image rows yet (or whose uploads failed) fall back to a
@@ -56,6 +58,7 @@ export default function ProductDetail({
 
   const currentSelection = () => ({
     productId: product.id,
+    slug: product.slug,
     name: product.name,
     price: unitPrice,
     variantId: selectedVariant?.id,
@@ -77,11 +80,8 @@ export default function ProductDetail({
 
   const handleBuyNow = () => {
     if (outOfStock) return;
-    addItem(currentSelection());
-    // Straight to checkout — if the customer isn't signed in the checkout
-    // page sends them to /login?next=/checkout, and the localStorage cart
-    // survives the round-trip.
-    router.push("/checkout");
+    try { saveDirectCheckout([currentSelection()]); router.push("/checkout/buy-now"); }
+    catch (error) { setCheckoutError(error instanceof Error ? error.message : "Checkout could not be opened."); }
   };
 
   return (
@@ -245,6 +245,7 @@ export default function ProductDetail({
             >
               Buy Now
             </button>
+            {checkoutError ? <p role="alert">{checkoutError}</p> : null}
           </div>
         </div>
       </div>

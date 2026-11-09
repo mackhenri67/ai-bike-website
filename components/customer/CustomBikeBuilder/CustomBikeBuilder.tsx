@@ -1,4 +1,7 @@
 "use client";
+import { useRouter } from "next/navigation";
+import { saveDirectCheckout } from "../direct-checkout";
+import type { AddToCartInput } from "../cart-store";
 import { legacyOptions } from "@/lib/product-options";
 import { builderAxes, builderVariant } from "@/lib/builder-options";
 
@@ -98,6 +101,8 @@ export default function CustomBikeBuilder({
   stepsError: string | null;
 }) {
   const { addItem } = useCart();
+  const router = useRouter();
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [view, setView] = useState<View>("landing");
   const [currentStep, setCurrentStep] = useState(0);
   const [prompt, setPrompt] = useState("");
@@ -159,6 +164,7 @@ export default function CustomBikeBuilder({
   };
 
   const changeAxis = (stepNumber: number, label: string, value: string) => {
+    setAdded(false);
     setSelections((previous) => {
       const selection = previous[stepNumber];
       if (!selection) return previous;
@@ -537,6 +543,7 @@ export default function CustomBikeBuilder({
           );
 
     const chooseProduct = (product: BuilderProduct) => {
+      setAdded(false);
       const first = product.variants?.find((row) => row.available && row.stock > 0);
       if (first) product = { ...product, price: first.price, stock: Math.min(product.catalogueStock ?? product.stock, first.stock) };
       setAiExplanation("");
@@ -693,7 +700,7 @@ export default function CustomBikeBuilder({
               disabled={currentStep === 0}
               onClick={() => setCurrentStep((i) => i - 1)}
             >
-              Back
+              Previous
             </button>
             <button
               type="button"
@@ -741,8 +748,8 @@ export default function CustomBikeBuilder({
     hasChosenOptions(step, selections[step.stepNumber]),
   );
 
-  const handleAddToCart = () => {
-    if (!buildComplete || added) return;
+  const getBuildItems = (): AddToCartInput[] => {
+    const result: AddToCartInput[] = [];
     for (const entry of orderedSelections) {
       const { step, selection } = entry;
       const axisEntries = Object.entries(selection!.axisValues);
@@ -758,8 +765,9 @@ export default function CustomBikeBuilder({
         axisEntries[0]?.[1] ??
         "Custom";
 
-      addItem({
+      result.push({
         productId: selection!.product.id,
+        slug: selection!.product.slug,
         options: selection!.axisValues,
         builderStepNumber: step.stepNumber,
         variantId: builderVariant(selection!.product, selection!.axisValues)
@@ -776,7 +784,18 @@ export default function CustomBikeBuilder({
         stock: selection!.product.stock,
       });
     }
+    return result;
+  };
+
+  const handleAddToCart = () => {
+    if (!buildComplete || added) return;
+    for (const item of getBuildItems()) addItem(item);
     setAdded(true);
+  };
+  const handleBuyNow = () => {
+    if (!buildComplete) return;
+    try { saveDirectCheckout(getBuildItems()); router.push("/checkout/buy-now"); }
+    catch (error) { setCheckoutError(error instanceof Error ? error.message : "Checkout could not be opened."); }
   };
 
   return (
@@ -787,7 +806,7 @@ export default function CustomBikeBuilder({
         </h1>
         <p className={styles.lead}>
           Review every part below. You can go back to any step to make changes
-          before adding your build to the cart.
+          before buying or adding your build to the cart.
         </p>
 
         {aiGenerated ? (
@@ -803,7 +822,7 @@ export default function CustomBikeBuilder({
             ) : null}
             <p className={styles.aiDesc}>{aiNotice}</p>
             <p className={styles.aiDesc}>
-              Confirm the options below before adding the build to your cart.
+              Confirm the options below before buying or adding your build to the cart.
             </p>
           </section>
         ) : null}
@@ -812,6 +831,7 @@ export default function CustomBikeBuilder({
           type="button"
           className={styles.editBtn}
           onClick={() => {
+            setAdded(false);
             setCurrentStep(0);
             setView("builder");
           }}
@@ -830,6 +850,7 @@ export default function CustomBikeBuilder({
                   {step.stepNumber}
                 </span>
                 <div className={styles.reviewBody}>
+                  <button type="button" className={styles.changePart} onClick={() => { setCurrentStep(orderedSteps.findIndex((item) => item.stepNumber === step.stepNumber)); setAdded(false); setView("builder"); }}>Change part</button>
                   <p className={styles.reviewName}>
                     {step.name}
                     <span className={styles.reviewProduct}>
@@ -861,7 +882,6 @@ export default function CustomBikeBuilder({
                               className={styles.axisSelect}
                               value={selection!.axisValues[axis.label] ?? ""}
                               aria-label={step.name + " " + axis.label}
-                              disabled={added}
                               onChange={(event) =>
                                 changeAxis(
                                   step.stepNumber,
@@ -925,36 +945,14 @@ export default function CustomBikeBuilder({
           >
             {aiGenerated ? "Change request" : "Back"}
           </button>
-          <button
-            type="button"
-            className={styles.addToCart}
-            onClick={handleAddToCart}
-            disabled={added || !buildComplete}
-          >
-            {added ? (
-              "Added to Cart ✓"
-            ) : (
-              <>
-                <svg
-                  className={styles.cartIcon}
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path
-                    d="M6 6h15l-1.5 9H7.5L6 6zm1 0 1-3h4M9 20a1.2 1.2 0 1 0 0-2.4A1.2 1.2 0 0 0 9 20zm8 0a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4z"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Add to cart
-              </>
-            )}
-          </button>
+          <div className={styles.purchaseActions}>
+            <button type="button" className={styles.cartSquare} onClick={handleAddToCart} disabled={added || !buildComplete} aria-label={added ? "Build added to cart" : "Add build to cart"} title={added ? "Added to cart" : "Add to cart"}>
+              {added ? <span aria-hidden="true">✓</span> : <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 3h3l3 12h11l2-8H7"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M15 2v6m-3-3h6"/></svg>}
+            </button>
+            <button type="button" className={styles.addToCart} onClick={handleBuyNow} disabled={!buildComplete}>Buy Now</button>
+          </div>
         </div>
+        {checkoutError ? <p role="alert">{checkoutError}</p> : null}
       </div>
     </main>
   );

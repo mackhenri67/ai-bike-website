@@ -350,3 +350,8 @@
     height: 84px;
   }
 }
+
+.batchDelete { display: inline-flex; align-items: center; justify-content: center; gap: 7px; margin-left: auto; padding: 9px 12px; border: 1px solid #fecaca; border-radius: 6px; background: #fff; color: #b91c1c; font-family: inherit; font-size: 13px; cursor: pointer; }
+.batchDelete:disabled { opacity: .45; cursor: default; }.batchDelete:hover:not(:disabled) { background: #fef2f2; }
+.name a { color: inherit; text-decoration: none; }.name a:hover { text-decoration: underline; }.selectAllRow { flex-wrap: wrap; gap: 12px; }
+@media(max-width: 600px) { .batchDelete { margin-left: 0; } }

@@ -8,6 +8,7 @@ export type CartItem = {
   /** Unique line key — product + size + color. */
   key: string;
   productId: string;
+  slug?: string;
   variantId?: string;
   options?: Record<string, string>;
   builderStepNumber?: number;
@@ -27,6 +28,7 @@ export type CartItem = {
 
 export type AddToCartInput = {
   productId: string;
+  slug?: string;
   variantId?: string;
   options?: Record<string, string>;
   builderStepNumber?: number;
@@ -143,6 +145,7 @@ export function addToCart(
       {
         key,
         productId: input.productId,
+        slug: input.slug,
         variantId: input.variantId,
         options: input.options,
         builderStepNumber: input.builderStepNumber,
@@ -161,6 +164,7 @@ export function addToCart(
     index === existingIndex
       ? {
           ...item,
+          slug: input.slug ?? item.slug,
           price: input.price,
           stock: input.stock,
           variantId: input.variantId,
@@ -175,4 +179,12 @@ export function addToCart(
         }
       : item,
   );
+}
+
+/** Removes precisely the checked lines in one state update. */
+export function removeSelectedItems(items: CartItem[]): CartItem[] {
+  return items.filter((item) => !item.selected);
+}
+export function cartProductHref(item: Pick<CartItem, "productId" | "slug">): string {
+  return item.slug ? `/products/${encodeURIComponent(item.slug)}` : `/products/by-id/${encodeURIComponent(item.productId)}`;
 }

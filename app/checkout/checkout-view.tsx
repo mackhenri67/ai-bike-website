@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirectCheckout } from "@/components/customer/direct-checkout";
 import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import Link from "next/link";
@@ -14,6 +15,7 @@ import { placeOrder } from "./actions";
 import styles from "./page.module.css";
 
 type CheckoutViewProps = {
+  direct?: boolean;
   customerName: string;
   location: {
     label: string | null;
@@ -37,16 +39,18 @@ const PAYMENT_METHODS = [
 export default function CheckoutView({
   customerName,
   location,
+  direct = false,
 }: CheckoutViewProps) {
   const { items } = useCart();
+  const directItems = useDirectCheckout();
   const [paymentMethod, setPaymentMethod] = useState<"gcash" | "cod">("gcash");
   const [state, formAction, isPlacing] = useActionState(placeOrder, {
     error: null,
   });
 
   const selectedItems = useMemo(
-    () => items.filter((item) => item.selected),
-    [items],
+    () => direct ? (directItems ?? []) : items.filter((item) => item.selected),
+    [items, direct, directItems],
   );
 
   const subtotal = useMemo(
@@ -58,12 +62,12 @@ export default function CheckoutView({
   if (selectedItems.length === 0) {
     return (
       <div className={styles.emptyCard}>
-        <h2 className={styles.cardTitle}>Your cart is empty</h2>
+        <h2 className={styles.cardTitle}>{direct ? "No Buy Now selection" : "Your cart is empty"}</h2>
         <p className={styles.text}>
-          Select at least one product in your cart before checking out.
+          {direct ? "Return to the product or bike builder and click Buy Now again." : "Select at least one product in your cart before checking out."}
         </p>
-        <Link href="/cart" className={styles.button}>
-          Go to Cart
+        <Link href={direct ? "/products" : "/cart"} className={styles.button}>
+          {direct ? "Browse products" : "Go to Cart"}
         </Link>
       </div>
     );
@@ -178,7 +182,8 @@ export default function CheckoutView({
         </dl>
 
         <form action={formAction} noValidate>
-          <input type="hidden" name="items" value={itemsJson} />
+          <input type="hidden" name="checkout_mode" value={direct ? "buy-now" : "cart"} />
+            <input type="hidden" name="items" value={itemsJson} />
           <input type="hidden" name="payment_method" value={paymentMethod} />
 
           {state.error ? (

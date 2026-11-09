@@ -116,16 +116,17 @@ export async function placeOrder(
     };
   }
 
+  const source = formData.get("checkout_mode") === "buy-now" ? "buy-now" : "cart";
   if (result.data.paymentMethod === "gcash") {
     // GCash orders continue to the dedicated payment page where the customer
     // scans the merchant QR code and submits their payment proof. `placed=1`
     // tells that page the order was just created so it can clear the cart.
     redirect(
-      `/gcash-payment/${encodeURIComponent(result.data.orderNumber)}?placed=1`,
+      `/gcash-payment/${encodeURIComponent(result.data.orderNumber)}?placed=1&source=${source}`,
     );
   }
 
   redirect(
-    `/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}`,
+    `/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&placed=1&source=${source}`,
   );
 }

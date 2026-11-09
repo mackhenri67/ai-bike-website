@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 type GcashPaymentPageProps = {
   params: Promise<{ orderNumber: string }>;
-  searchParams: Promise<{ placed?: string }>;
+  searchParams: Promise<{ placed?: string; source?: string }>;
 };
 
 export default async function GcashPaymentPage({
@@ -33,7 +33,7 @@ export default async function GcashPaymentPage({
 }: GcashPaymentPageProps) {
   const { orderNumber } = await params;
   const cleanOrderNumber = orderNumber.trim();
-  const { placed } = await searchParams;
+  const { placed, source } = await searchParams;
   const justPlaced = placed === "1";
 
   const user = await getUser();
@@ -94,13 +94,16 @@ export default async function GcashPaymentPage({
     getGcashPaymentForOrder(order.id),
   ]);
 
+  if (payment && payment.status !== "rejected" || order.payment_status === "paid") {
+    redirect(`/checkout/success?order=${encodeURIComponent(order.order_number)}`);
+  }
   return (
     <>
       <CustomerHeader />
       {/* Clears the cart right after a freshly placed GCash order (redirect
           comes with ?placed=1). Revisits of older payment pages never clear
           the cart. */}
-      {justPlaced ? <ClearCartOnMount /> : null}
+      {justPlaced ? <ClearCartOnMount direct={source === "buy-now"} orderNumber={order.order_number} /> : null}
       <main className={styles.page}>
         <div className={styles.container}>
           <GcashPaymentView

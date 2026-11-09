@@ -951,3 +951,10 @@
   }
 }
 
+
+.purchaseActions { display: flex; align-items: stretch; gap: 12px; margin-left: auto; }
+.purchaseActions .addToCart { margin-left: 0; justify-content: center; min-height: 56px; }
+.cartSquare { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; flex-shrink: 0; border: 1px solid #d2ac24; border-radius: 8px; color: #3b310d; background: #fff7d4; cursor: pointer; font-size: 24px; }
+.cartSquare:hover:not(:disabled) { background: #f8e89f; }.cartSquare:disabled { opacity: .6; cursor: default; }
+.changePart { display: inline-flex; border: 0; background: none; padding: 0; margin-bottom: 8px; color: #805d00; font-size: 12px; text-decoration: underline; cursor: pointer; }
+@media(max-width: 600px) { .purchaseActions { width: 100%; }.purchaseActions .addToCart { flex: 1; width: auto; } }

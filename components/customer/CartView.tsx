@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "./CartContext";
 import {
+  cartProductHref,
   calculateSubtotal,
   calculateTotal,
   formatCurrency,
@@ -29,6 +30,7 @@ export default function CartView() {
     incrementQuantity,
     decrementQuantity,
     removeItem,
+    removeSelectedItems,
   } = useCart();
 
   const allSelected = items.length > 0 && items.every((item) => item.selected);
@@ -46,7 +48,7 @@ export default function CartView() {
   const count = selectedItemCount(items);
 
   const handleCheckout = () => {
-    router.push("/checkout");
+    if (someSelected) router.push("/checkout");
   };
 
   if (items.length === 0) {
@@ -86,6 +88,9 @@ export default function CartView() {
                 Select All (
                 {items.length} {items.length === 1 ? "item" : "items"})
               </label>
+              <button type="button" className={styles.batchDelete} disabled={!someSelected} onClick={removeSelectedItems}>
+                <TrashIcon size={16} /> Delete Selected ({items.filter((item) => item.selected).length})
+              </button>
             </div>
 
             <ul className={styles.items}>
@@ -98,7 +103,7 @@ export default function CartView() {
                     onChange={() => toggleItemSelection(item.key)}
                     aria-label={`Select ${item.name}`}
                   />
-                  <div
+                  <Link href={cartProductHref(item)} aria-label={`View ${item.name}`}
                     className={
                       item.productId === "proway-bottle-cage"
                         ? styles.imageSmall
@@ -112,9 +117,9 @@ export default function CartView() {
                       sizes="100px"
                       className={styles.imageInner}
                     />
-                  </div>
+                  </Link>
                   <div className={styles.info}>
-                    <h3 className={styles.name}>{item.name}</h3>
+                    <h3 className={styles.name}><Link href={cartProductHref(item)}>{item.name}</Link></h3>
                     <p className={styles.price}>{formatCurrency(item.price)}</p>
                   </div>
                   <div className={styles.quantity}>
@@ -174,6 +179,7 @@ export default function CartView() {
               type="button"
               className={styles.checkout}
               onClick={handleCheckout}
+              disabled={!someSelected}
             >
               Checkout
             </button>
