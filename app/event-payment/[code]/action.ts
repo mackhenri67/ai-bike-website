@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { isOwnProofPath } from "@/lib/storage/proof-path";
+import { isEventProofPath } from "@/lib/storage/proof-path";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePhMobileNumber } from "@/lib/data/customer/gcash";
 import { submitEventGcashPayment } from "@/lib/data/customer/events";
@@ -56,9 +56,9 @@ export async function submitEventGcashPaymentAction(
     };
   }
 
-  if (!isOwnProofPath(screenshotUrl, user.id))
+  if (!isEventProofPath(screenshotUrl, user.id, registrationCode))
     return {
-      error: "Upload a new screenshot using your own account.",
+      error: "Upload your GCash receipt using this registration's payment form.",
     };
 
   const normalizedPhone = normalizePhMobileNumber(phoneNumber);

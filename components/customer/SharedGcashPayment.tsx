@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
 import { uploadPaymentProof } from "@/lib/storage/upload-proof";
@@ -121,6 +121,11 @@ export default function SharedGcashPayment({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadVersion = useRef(0);
+
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   const [state, formAction, isSubmitting] = useActionState(
     submitAction,
@@ -139,6 +144,12 @@ export default function SharedGcashPayment({
     event.target.value = "";
     if (!file) return;
 
+    const version = ++uploadVersion.current;
+    // A replacement must never submit the previous file while a new upload runs.
+    setScreenshotUrl("");
+    setPreviewUrl(null);
+    setIsUploading(false);
+
     if (!ACCEPTED_TYPES.includes(file.type)) {
       setUploadError("Please choose a PNG or JPG image.");
       return;
@@ -156,15 +167,17 @@ export default function SharedGcashPayment({
     setIsUploading(true);
 
     try {
-      setScreenshotUrl(await uploadPaymentProof(file, context ? "events" : "orders", context?.code ?? order.id));
+      const path = await uploadPaymentProof(file, context ? "events" : "orders", context?.code ?? order.id);
+      if (version === uploadVersion.current) setScreenshotUrl(path);
     } catch (err) {
+      if (version !== uploadVersion.current) return;
       setUploadError(
         err instanceof Error ? err.message : "Upload failed. Please try again.",
       );
       setPreviewUrl(null);
       setScreenshotUrl("");
     } finally {
-      setIsUploading(false);
+      if (version === uploadVersion.current) setIsUploading(false);
     }
   };
 
@@ -186,7 +199,10 @@ export default function SharedGcashPayment({
     </section></div>;
   }
 
-  if (payment && payment.status !== "rejected") {
+  // A pending event proof may be incorrect. Keep the same two-panel form used
+  // by product payments, with an empty uploader for an explicit replacement.
+  // Verified payments stay read-only so customers are never asked to pay twice.
+  if (payment && payment.status !== "rejected" && (!context || payment.status === "paid")) {
     const status = PAYMENT_STATUS[payment.status] ?? {
       label: payment.status,
       className: "",
@@ -258,6 +274,13 @@ export default function SharedGcashPayment({
 
   return (
     <div className={styles.grid}>
+      {context && payment?.status === "pending" ? (
+        <p role="status" className={styles.pendingNote} style={{ gridColumn: "1 / -1" }}>
+          A payment screenshot is already awaiting review. Do not pay again.
+          {" "}To correct it, upload the actual GCash receipt below and confirm the replacement.
+          {" "}<Link href={`/event-payment/${encodeURIComponent(context.code)}/confirmation`}>Keep the current submission</Link>.
+        </p>
+      ) : null}
       {payment?.status === "rejected" ? (
         <p
           role="alert"

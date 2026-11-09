@@ -358,15 +358,31 @@
   background: #fee2e2;
 }
 
-.rejectionNote {
+.rejectionNote,
+.pendingNote {
   margin: 14px 0 0;
   padding: 10px 14px;
   font-size: 13px;
   line-height: 20px;
+  border: 1px solid;
+  border-radius: 7px;
+}
+
+.rejectionNote {
   color: #b91c1c;
   background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 7px;
+  border-color: #fecaca;
+}
+
+.pendingNote {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.pendingNote a {
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .screenshotBlock {
