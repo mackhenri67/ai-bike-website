@@ -107,6 +107,7 @@ export type OrderItemRow = {
 };
 
 export type OrderRow = {
+  payment_receipt?: { url: string | null; sender: string | null; reference: string | null; status: string } | null;
   id: string;
   order_number: string;
   customer_id: string | null;

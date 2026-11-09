@@ -60,7 +60,7 @@ export default function EventPaymentView({
         <div className={styles.successHeader}><h2>{amount === 0 ? "No payment required" : "Payment already verified"}</h2></div>
         <div className={styles.successBody}><p>{amount === 0 ? "This is a free event. You can continue to your e-ticket without making a payment." : "Your payment has been verified. You do not need to pay again."}</p><p className={styles.code}>{registrationCode}</p><p>Registration fee: {formatCurrency(amount)}</p></div>
       </section>
-      <div className={styles.successActions}><Link href={`/my-events/${encodeURIComponent(registrationCode)}`} className={styles.payButton}>Continue to e-ticket</Link></div>
+      <div className={styles.successActions}><Link href={`/profile?tab=events&ticket=${encodeURIComponent(registrationCode)}`} className={styles.payButton}>View Ticket</Link></div>
     </>;
   }
 
@@ -73,7 +73,7 @@ export default function EventPaymentView({
         <div className={styles.successHeader}><div><small>LNR Cycle Center registration</small><h2>{eventTitle}</h2></div><span className={styles.pendingBadge}>Awaiting review</span></div>
         <div className={styles.successBody}><p className={styles.code}>{registrationCode}</p><p>We will update your payment status after verification.</p><dl><div><dt>Amount</dt><dd>{formatCurrency(amount)}</dd></div><div><dt>GCash reference</dt><dd>{paymentReference || "See your submitted payment details"}</dd></div></dl></div>
       </section>
-      <div className={styles.successActions}><Link href={`/my-events/${encodeURIComponent(registrationCode)}`} className={styles.payButton}>Open ticket page</Link><Link href="/events" className={styles.secondary}>Browse more events</Link></div>
+      <div className={styles.successActions}><Link href={`/profile?tab=events&ticket=${encodeURIComponent(registrationCode)}`} className={styles.payButton}>View Ticket</Link><Link href="/events" className={styles.secondary}>Browse more events</Link></div>
     </>;
   }
 

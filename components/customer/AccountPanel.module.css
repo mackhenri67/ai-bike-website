@@ -3,3 +3,10 @@
 .dialog { border: 0; padding: 0; border-radius: 12px; width: min(760px, calc(100% - 32px)); max-height: calc(100svh - 48px); margin: auto; overflow: auto; background: #fff; color: #303030; box-shadow: 0 20px 60px #0003; }.dialog::backdrop { background: #0008; }.dialogContent { position: relative; padding: 38px 24px 24px; }.close { position: absolute; right: 10px; top: 6px; border: 0; background: #f3f4f6; border-radius: 5px; width: 28px; height: 28px; font-size: 22px; cursor: pointer; }.confirmTitle { font-size: 20px; margin-bottom: 12px; }.confirmText { color: #6b7280; font-size: 14px; line-height: 1.8; }.confirmActions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }.keep { background: #f3f4f6; color: #303030; border: 0; }.danger { background: #ef4444; color: #fff; border: 0; }.danger:disabled,.keep:disabled { opacity: .6; cursor: wait; }.error { color: #b91c1c; background: #fef2f2; padding: 12px; border-radius: 6px; font-size: 14px; }
 @media(max-width: 800px) { .row { flex-wrap: wrap; gap: 16px; }.actions { margin-left: auto; }.card { padding: 20px; }.eventInfo { min-width: 160px; } }
 @media(max-width: 480px) { .tab,.activeTab { flex: 1; padding: 10px; }.productImage { width: 72px; height: 72px; }.eventImage { width: 80px; height: 70px; }.item { gap: 14px; }.amount { align-items: flex-start; }.items { flex-basis: 100%; }.menu { margin-left: auto; }.dialogContent { padding: 38px 16px 20px; } }
+
+.receiptButton { border: 0; background: transparent; padding: 0; color: #5b4b11; text-decoration: underline; font: inherit; font-size: 13px; cursor: pointer; }
+.receiptImage { display: block; max-width: 100%; max-height: 65svh; object-fit: contain; margin: 20px auto 0; }
+.ticketDialog { background: transparent; box-shadow: none; overflow: visible; padding-top: 42px; }
+.ticketDialog .dialogContent { padding: 0; overflow: visible; }
+.ticketDialog .close { top: -38px; right: 0; width: 32px; height: 32px; background: #fff; box-shadow: 0 2px 8px #0002; }
+.ticketSurface { max-height: calc(100svh - 110px); overflow-y: auto; border-radius: 16px; }

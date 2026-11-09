@@ -13,9 +13,10 @@ import SignOutButton from "./sign-out-button";
 import styles from "./page.module.css";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account Overview | LNR Cycle Center" };
-export default async function ProfilePage({ searchParams }: { searchParams: Promise<{tab?:string}> }) {
-  const user=await getUser();if(!user)redirect("/login?next=%2Fprofile");
-  const {tab}=await searchParams;const active=tab==='orders'?'orders':tab==='events'?'events':'profile';
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{tab?:string;ticket?:string}> }) {
+  const {tab,ticket}=await searchParams;const active=tab==='orders'?'orders':tab==='events'?'events':'profile';
+  const next = `/profile?tab=${active}${ticket ? `&ticket=${encodeURIComponent(ticket)}` : ""}`;
+  const user=await getUser();if(!user)redirect(`/login?next=${encodeURIComponent(next)}`);
   const profile=await getCustomerProfile(user.id);
   if(!profile)return <><CustomerHeader/><main className={styles.page}><div className={styles.container}><p>We couldn&apos;t load your account. Please try again later.</p></div></main><CustomerFooter/></>;
   const {customer,location,orders}=profile;
@@ -71,6 +72,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           </div>
 
 
-    </> : active==='orders'?<div id="orders-title"><AccountPanel kind="orders" orders={orders}/></div>:<>{eventsResult?.error?<p className={styles.error} role="alert">{eventsResult.error}</p>:null}<AccountPanel kind="events" registrations={eventsResult?.data??[]}/></>}
+    </> : active==='orders'?<div id="orders-title"><AccountPanel kind="orders" orders={orders}/></div>:<>{eventsResult?.error?<p className={styles.error} role="alert">{eventsResult.error}</p>:null}<AccountPanel key={ticket ?? "events"} kind="events" registrations={eventsResult?.data??[]} initialTicketCode={ticket}/></>}
   </div></main><CustomerFooter/></>;
 }

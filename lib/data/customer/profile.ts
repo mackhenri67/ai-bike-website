@@ -1,4 +1,5 @@
 import "server-only";
+import { paymentProofUrl } from "@/lib/storage/proofs";
 import { createClient } from "@/lib/supabase/server";
 import type { CustomerRow, OrderRow } from "@/lib/data/types";
 import { getCustomerByAuthUserId } from "./customers";
@@ -10,6 +11,7 @@ const ORDER_SELECT = `
   shipping_address, subtotal, shipping_fee, discount, total,
   payment_method, payment_status, status, payment_reference, notes,
   created_at, updated_at,
+  gcash_payments(screenshot_url,sender_name,reference_number,status),
   order_items(id, product_id, product_variant_id, product_name, size, color,
               unit_price, quantity, line_total, product:products(product_images(url,is_primary,sort_order)))
 `;
@@ -52,5 +54,9 @@ export async function listCustomerOrders(
     .order("created_at", { ascending: false });
 
   if (error || !data) return null;
-  return data as unknown as OrderRow[];
+  return Promise.all((data as unknown as OrderRow[]).map(async (order) => {
+    const payment = Array.isArray(order.gcash_payments) ? order.gcash_payments[0] : order.gcash_payments;
+    const url = payment?.screenshot_url ? await paymentProofUrl(payment.screenshot_url) : null;
+    return { ...order, gcash_payments: undefined, payment_receipt: payment ? { url: url || null, sender: payment.sender_name, reference: payment.reference_number, status: payment.status } : null };
+  }));
 }
