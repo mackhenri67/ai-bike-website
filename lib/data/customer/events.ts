@@ -21,7 +21,7 @@ const EVENT_SELECT = `
 
 const REGISTRATION_SELECT = `
   id, registration_code, event_id, customer_id, customer_name, customer_email,
-  customer_phone, rider_name, plate_number, category, amount_paid,
+  customer_phone, rider_name, plate_number, emergency_contact, category, amount_paid,
   payment_method, payment_status, status, proof_screenshot_url, reference_number, payment_sender_name, payment_phone_number,
   rejection_reason, reviewed_at, reviewed_by, created_at, updated_at,
   event:events(id, slug, title, category, event_date, location, banner_image_url)
@@ -141,6 +141,7 @@ export type CreateEventRegistrationInput = {
   customerPhone: string | null;
   riderName: string;
   plateNumber?: string | null;
+  emergencyContact?: string | null;
   category?: string | null;
   amountPaid: number;
 };
@@ -157,11 +158,11 @@ export async function createEventRegistration(
 
   const user = await getUser();
   if (!user) return { data: null, error: "Sign in with a customer account." };
-  const { data, error } = await admin.rpc("lnr_register_event", {
+  const { data, error } = await admin.rpc("lnr_register_event_with_contact", {
     p_user: user.id,
     p_event: input.eventId,
     p_rider: input.riderName,
-    p_plate: input.plateNumber ?? null,
+    p_emergency: input.emergencyContact ?? null,
     p_category: input.category ?? null,
   });
   return {

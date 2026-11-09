@@ -19,7 +19,7 @@ const EVENT_SELECT = `
 
 const REGISTRATION_SELECT = `
   id, registration_code, event_id, customer_id, customer_name, customer_email,
-  customer_phone, rider_name, plate_number, category, amount_paid,
+  customer_phone, rider_name, plate_number, emergency_contact, category, amount_paid,
   payment_method, payment_status, status, proof_screenshot_url, reference_number, payment_sender_name, payment_phone_number,
   rejection_reason, reviewed_at, reviewed_by, created_at, updated_at,
   event:events(id, slug, title, category, event_date, location, banner_image_url)

@@ -51,11 +51,24 @@ export default function EventPaymentView({
   const fileRef = useRef<HTMLInputElement>(null);
   const objectUrlRef = useRef<string | null>(null);
 
+  if (paymentStatus === "paid") {
+    return <>
+      <h1 className={styles.pageTitle}>Online Payment</h1>
+      <p className={styles.lead}>{eventTitle} · {registrationCode}</p>
+      <EventSteps current={2} />
+      <section className={styles.successCard}>
+        <div className={styles.successHeader}><h2>{amount === 0 ? "No payment required" : "Payment already verified"}</h2></div>
+        <div className={styles.successBody}><p>{amount === 0 ? "This is a free event. You can continue to your e-ticket without making a payment." : "Your payment has been verified. You do not need to pay again."}</p><p className={styles.code}>{registrationCode}</p><p>Registration fee: {formatCurrency(amount)}</p></div>
+      </section>
+      <div className={styles.successActions}><Link href={`/my-events/${encodeURIComponent(registrationCode)}`} className={styles.payButton}>Continue to e-ticket</Link></div>
+    </>;
+  }
+
   if (state.success || (paymentStatus === "pending" && submittedProof)) {
     return <>
       <h1 className={styles.pageTitle}>Registration received</h1>
       <p className={styles.lead}>Your payment proof is awaiting review. Keep your registration code for reference.</p>
-      <EventSteps current={3} />
+      <EventSteps current={2} />
       <section className={styles.successCard}>
         <div className={styles.successHeader}><div><small>LNR Cycle Center registration</small><h2>{eventTitle}</h2></div><span className={styles.pendingBadge}>Awaiting review</span></div>
         <div className={styles.successBody}><p className={styles.code}>{registrationCode}</p><p>We will update your payment status after verification.</p><dl><div><dt>Amount</dt><dd>{formatCurrency(amount)}</dd></div><div><dt>GCash reference</dt><dd>{paymentReference || "See your submitted payment details"}</dd></div></dl></div>

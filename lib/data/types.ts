@@ -265,6 +265,7 @@ export type RegistrationStatus = "registered" | "cancelled";
 
 /** A customer's sign-up for an event, including the GCash payment proof. */
 export type EventRegistrationRow = {
+  emergency_contact?: string | null;
   id: string;
   registration_code: string;
   event_id: string;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { requireCustomer } from "@/lib/auth/guards";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getGcashSettings } from "@/lib/data/admin/gcash";
 import { getEventRegistrationByCode } from "@/lib/data/customer/events";
 import CustomerHeader from "@/components/customer/CustomerHeader";
@@ -32,11 +32,6 @@ export default async function EventPaymentPage({
   if (!registration) notFound();
   if (registration.status === "cancelled") notFound();
 
-  // Already verified? Show the ticket instead of re-collecting payment.
-  if (registration.payment_status === "paid") {
-    redirect(`/my-events/${encodeURIComponent(registrationCode)}`);
-  }
-
   const settingsResult = await getGcashSettings();
 
   return (
@@ -45,6 +40,7 @@ export default async function EventPaymentPage({
       <main className={styles.page}>
         <div className={styles.container}>
           <EventPaymentView
+            key={registration.registration_code}
             paymentStatus={registration.payment_status}
             submittedProof={registration.proof_screenshot_url}
             rejectionReason={registration.rejection_reason}

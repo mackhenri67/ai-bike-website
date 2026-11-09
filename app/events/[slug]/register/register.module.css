@@ -18,3 +18,5 @@
 .summary dl { margin-top: 24px; border-top: 1px solid #ddd; }.summary dl div { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0; font-size: 14px; }.summary dd { margin: 0; }.total { border-top: 1px solid #ddd; }.total dd { font-size: 24px; font-weight: 800; }
 .actions { display: flex; justify-content: center; align-items: center; gap: 20px; }.submit { width: min(100%, 448px); min-height: 52px; border: 1px solid #312a0d; border-radius: 7px; background: #e8c332; font-size: 18px; font-weight: 700; cursor: pointer; padding: 12px 20px; }.submit:disabled { opacity: .6; }.cancel { font-size: 14px; color: #6b7280; text-decoration: underline; }.error { padding: 14px; background: #fef2f2; color: #b91c1c; border-radius: 6px; }
 @media(max-width: 700px) { .layout { grid-template-columns: 1fr; gap: 20px; }.page { padding: 32px 16px 48px; }.card,.summary { padding: 22px; }.actions { flex-direction: column-reverse; } }
+
+.back { display: inline-flex; align-items: center; margin-bottom: 18px; color: #6b7280; font-size: 14px; text-decoration: none; }.back:hover { color: #111; }

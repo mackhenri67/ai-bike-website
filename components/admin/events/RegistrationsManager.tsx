@@ -192,7 +192,7 @@ export default function RegistrationsManager({
                 <tr key={reg.id}>
                   <td className={styles.mono}>{reg.registration_code}</td>
                   <td>{reg.event?.title ?? "—"}</td>
-                  <td>{reg.rider_name}</td>
+                  <td>{reg.rider_name}{reg.emergency_contact ? <p className={styles.emergencyContact}>Emergency: {reg.emergency_contact}</p> : null}</td>
                   <td>{formatPeso(Number(reg.amount_paid) || 0)}</td>
                   <td>
                     <span
@@ -259,6 +259,7 @@ export default function RegistrationsManager({
                 <dt>Rider</dt>
                 <dd>{reviewing.rider_name}</dd>
               </div>
+              {reviewing.emergency_contact ? <div><dt>Emergency contact</dt><dd>{reviewing.emergency_contact}</dd></div> : null}
               <div>
                 <dt>Amount</dt>
                 <dd>{formatPeso(Number(reviewing.amount_paid) || 0)}</dd>

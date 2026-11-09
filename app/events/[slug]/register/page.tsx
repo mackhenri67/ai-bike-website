@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
@@ -35,6 +36,7 @@ export default async function EventRegisterPage({
       <CustomerHeader />
       <main className={styles.page}>
         <div className={styles.container}>
+            <Link href={`/events/${event.slug}`} className={styles.back}>← Back</Link>
             <h1 className={styles.title}>Registration</h1>
             <p className={styles.subtitle}>
               {new Date(event.event_date).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "full" })} · {event.capacity > 0 ? `${Math.max(0, event.capacity - event.slots_booked)} slots left` : "Open registration"}
