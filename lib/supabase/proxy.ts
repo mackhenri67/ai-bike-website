@@ -8,7 +8,8 @@ export async function updateSession(request: NextRequest) {
   const config = getSupabaseConfig();
   if (!config) return response;
   const path = request.nextUrl.pathname;
-  const adminArea = path === "/admin" || path.startsWith("/admin/");
+  const adminPage = path === "/admin" || path.startsWith("/admin/");
+  const adminArea = adminPage || path.startsWith("/api/admin/");
   const client = createServerClient(config.url, config.anonKey, {
     cookieOptions: { name: SESSION_COOKIES[adminArea ? "admin" : "customer"] },
     cookies: {
@@ -31,7 +32,7 @@ export async function updateSession(request: NextRequest) {
     return result;
   };
   const authPage = path === "/admin/login" || path === "/admin/reset-password";
-  if (adminArea && !authPage && !isAdmin(user)) {
+  if (adminPage && !authPage && !isAdmin(user)) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
     url.search = "";

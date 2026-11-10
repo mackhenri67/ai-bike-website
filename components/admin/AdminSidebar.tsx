@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { adminSignOut } from "@/app/admin/actions";
 import { useNewOrders } from "./NewOrdersContext";
 import AdminNavItem from "./AdminNavItem";
+import ChatIcon from "@/components/chat/ChatIcon";
+import { useAdminMessageCount } from "@/components/chat/useAdminMessageCount";
 import {
   CalendarIcon,
   CartIcon,
@@ -29,6 +31,7 @@ const NAV_ITEMS = [
   { href: "/admin/registrations", label: "Sign-ups", icon: TicketIcon },
   { href: "/admin/products", label: "Products", icon: CubeIcon },
   { href: "/admin/customers", label: "Customers", icon: UsersIcon },
+  { href: "/admin/messages", label: "Messages", icon: ChatIcon },
   { href: "/admin/settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -43,6 +46,7 @@ export default function AdminSidebar() {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   const { unreadCount } = useNewOrders();
+  const messageCount = useAdminMessageCount();
 
   // "/admin" is the dashboard's redirect target, so count it as active.
   const effectivePath = pathname === "/admin" ? "/admin/dashboard" : pathname;
@@ -99,7 +103,7 @@ export default function AdminSidebar() {
               active={isActive(item.href)}
               onClick={close}
               badge={
-                item.href === "/admin/orders" ? unreadCount || undefined : undefined
+                item.href === "/admin/orders" ? unreadCount || undefined : item.href === "/admin/messages" ? messageCount || undefined : undefined
               }
             />
           ))}

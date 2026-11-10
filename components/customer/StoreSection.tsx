@@ -1,14 +1,16 @@
-import Image from "next/image";
-import { MAP_SRC, STORE_INFO } from "./data";
+import { STORE_INFO } from "./data";
 import { MapPinIcon } from "./icons";
 import styles from "./StoreSection.module.css";
 
 /**
  * Store information + map. Left column holds the store details and a
- * DIRECTIONS button (plain Google Maps search link — no map library), right
- * column shows the provided map image.
+ * directions button. The embedded map supports panning and zooming.
  */
 export default function StoreSection() {
+  const destination = [STORE_INFO.name, STORE_INFO.addressLine1, STORE_INFO.addressLine2].join(" ");
+  const mapQuery = encodeURIComponent(destination);
+  const mapUrl = `https://www.google.com/maps?q=${mapQuery}&z=16&output=embed`;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${mapQuery}`;
   return (
     <section className={styles.section}>
       <div className={styles.container}>
@@ -21,7 +23,7 @@ export default function StoreSection() {
           </p>
           <p className={styles.hours}>{STORE_INFO.hours}</p>
           <a
-            href={STORE_INFO.directionsUrl}
+            href={directionsUrl}
             target="_blank"
             rel="noreferrer"
             className={styles.directions}
@@ -32,12 +34,13 @@ export default function StoreSection() {
         </div>
 
         <div className={styles.mapWrap}>
-          <Image
-            src={MAP_SRC}
-            alt={`Map showing the location of ${STORE_INFO.name}`}
-            fill
-            sizes="(max-width: 900px) 90vw, 720px"
-            className={styles.mapImage}
+          <iframe
+            src={mapUrl}
+            title={`Interactive map of ${STORE_INFO.name}, Tabaco City`}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+            className={styles.mapFrame}
           />
         </div>
       </div>

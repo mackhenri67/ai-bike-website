@@ -192,7 +192,7 @@ export default async function ProductsPage({ searchParams }: Props) {
             {/* Page header — LnR Cycle Center / BROWSE PRODUCTS / description */}
             <header className={styles.header}>
               <p className={styles.eyebrow}>LnR Cycle Center</p>
-              <h1 className={styles.title}>Browse Products</h1>
+              <h1 className={styles.title}>Products</h1>
               <p className={styles.description}>
                 Complete bikes, components and accessories everything below is
                 on our shop floor in Tabaco City.

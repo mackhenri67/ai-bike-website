@@ -3,6 +3,7 @@ import { Open_Sans, Inter, Archivo, Instrument_Sans } from "next/font/google";
 import { CartProvider } from "@/components/customer/CartContext";
 import { getHomepageBanners } from "@/lib/data/banners";
 import { ShopProvider } from "@/components/customer/ShopContext";
+import FloatingCustomerChat from "@/components/chat/FloatingCustomerChat";
 import "./globals.css";
 
 // Design reference (Figma "Admin Page Prototype") uses the Open Sans family.
@@ -52,7 +53,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body>
         <ShopProvider banners={banners}>
-          <CartProvider>{children}</CartProvider>
+          <CartProvider>{children}<FloatingCustomerChat/></CartProvider>
         </ShopProvider>
       </body>
     </html>

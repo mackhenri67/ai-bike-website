@@ -40,7 +40,7 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
       <main className={styles.page}>
         <div className={styles.container}>
           <header className={styles.header}>
-            <h1 className={styles.title}>Cycling Events</h1>
+            <h1 className={styles.title}>Events</h1>
             <p className={styles.subtitle}>
               Join our fun rides, races and community events. Reserve your slot
               and pay securely with GCash.
