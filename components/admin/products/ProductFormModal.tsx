@@ -9,11 +9,13 @@ import type {
 } from "@/lib/data/types";
 import type { CategoryAxis } from "./categoryConfig";
 import { getCategoryAxes } from "./categoryConfig";
+import { type RetailerReference, getRetailerReference, referenceAxes, missingReferenceCombinations } from "./retailer-options";
 import { CategoryPicker } from "./CategoryPicker";
 import { OptionGroup } from "./OptionGroup";
 import styles from "./ProductFormModal.module.css";
 
 interface ProductFormModalProps {
+  references?: RetailerReference[];
   product: ProductRow | null;
   categories: CategoryRow[];
   onClose: () => void;
@@ -105,7 +107,8 @@ function formStateFromProduct(
   const axes = getCategoryAxes(
     product.category?.slug ??
       categories.find((category) => category.id === product.category_id)?.slug ??
-      null
+      null,
+    categories.find(category => category.id === product.category_id)?.customization_axes
   );
   const customizationValues: Record<string, string[]> = {};
   const specs = (product.specs ?? []).filter((line) => {
@@ -183,6 +186,7 @@ export default function ProductFormModal({
   onClose,
   onSave,
   submitting,
+  references = [],
   onThumbnailUpload,
   onGalleryUpload,
 }: ProductFormModalProps) {
@@ -200,6 +204,7 @@ export default function ProductFormModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [galleryDraft, setGalleryDraft] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [sourceNotice, setSourceNotice] = useState<string | null>(null);
   const slugEdited = useState(product !== null);
   const isEdit = product !== null;
 
@@ -266,10 +271,40 @@ export default function ProductFormModal({
   // (UUID). Resolve the selected category's slug so the axes (customization
   // fields) render for the chosen category instead of always falling back to [].
   const selectedCategory = categories.find((c) => c.id === form.categoryId);
-  const categoryAxes = getCategoryAxes(selectedCategory?.slug);
-  const knownLabels = new Set(categoryAxes.map((axis) => axis.label));
+  const categoryAxes = getCategoryAxes(selectedCategory?.slug, selectedCategory?.customization_axes);
+  const retailerReference = getRetailerReference(form.slug, form.name, references, product?.id);
+  const sourceFields = referenceAxes(retailerReference, categoryAxes);
+  const referenceCategoryAxes = categoryAxes.map(axis => {
+    const source = sourceFields.find(field => field.axis.label === axis.label);
+    return source ? { ...axis, presets: [...new Set([...source.values, ...axis.presets])] } : axis;
+  });
+  for (const field of sourceFields) {
+    if (!referenceCategoryAxes.some(axis => axis.label === field.axis.label)) referenceCategoryAxes.push({...field.axis, presets: field.values});
+  }
+  const knownLabels = new Set(referenceCategoryAxes.map((axis) => axis.label));
   const extraLabels = [...new Set(form.variants.flatMap((v) => Object.keys(v.options)))].filter((label) => !knownLabels.has(label));
-  const axes: CategoryAxis[] = [...categoryAxes, ...extraLabels.map((label) => ({ flag: label, field: label, label, hint: "Saved product option", presets: [], placeholder: "Add option" }))];
+  const axes: CategoryAxis[] = [...referenceCategoryAxes, ...extraLabels.map((label) => ({ flag: label, field: label, label, hint: "Saved product option", presets: [], placeholder: "Add option" }))];
+
+  const importSourceCombinations = () => {
+    if (!retailerReference) return;
+    try {
+      const additions = missingReferenceCombinations(retailerReference, categoryAxes, form.variants, Number(form.stock));
+      const added = additions.map(options => ({key: crypto.randomUUID(), options, size: "", color: "", sku: "", price: form.price, stock: "0", available: false}));
+      const rows = [...form.variants, ...added];
+      const nextValues: Record<string,string[]> = {};
+      for (const row of rows) for (const [label,value] of Object.entries(row.options)) {
+        const flag = axes.find(axis => axis.label === label)?.flag ?? label;
+        nextValues[flag] = [...new Set([...(nextValues[flag] ?? []), value])];
+      }
+      setCustomizationValues(nextValues);
+      setForm(current => ({...current, variants: rows}));
+      setSourceNotice(`${additions.length} missing combinations added to this form at zero stock and unavailable. Existing combinations, quantities and prices were preserved. Review and Save Product to apply.`);
+      setFormError(null);
+    } catch (error) {
+      setSourceNotice(null);
+      setFormError(error instanceof Error ? error.message : "The source options could not be imported.");
+    }
+  };
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -484,6 +519,16 @@ export default function ProductFormModal({
           </div>
 
           {/* Customization Fields */}
+          {retailerReference ? <section aria-label="Retailer variation reference">
+            <h3 className={styles.sectionTitle}>Retailer variation reference</h3>
+            <p className={styles.sectionHint}>Matched to <a href={retailerReference.sourceUrl} target="_blank" rel="noreferrer">{retailerReference.sourceTitle}</a>. Checked November 12, 2026. Source prices and stock are not imported.</p>
+            {sourceFields.length ? <>
+              {sourceFields.map(field => <p key={field.source} className={styles.inlineNote}><strong>{field.axis.label}:</strong> {field.values.join(", ")}</p>)}
+              <p className={styles.inlineNote}>Imports only combinations listed by this source, rather than every possible mix. New combinations have 0 stock and Available unchecked. Existing stocked rows must already identify the same fields.</p>
+              <button type="button" className={styles.secondaryButton} disabled={submitting} onClick={importSourceCombinations}>Add missing source combinations (0 stock)</button>
+            </> : <p className={styles.inlineNote}>The matched listing has no selectable variations. Keep this product fixed unless you have verified additional shop options.</p>}
+            {sourceNotice ? <p className={styles.inlineNote} role="status">{sourceNotice}</p> : null}
+          </section> : null}
           {axes.length > 0 ? (
             <div>
               <h3 className={styles.sectionTitle}>Customization Fields</h3>

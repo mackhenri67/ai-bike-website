@@ -1,4 +1,5 @@
 "use client";
+import type { RetailerReference } from "./retailer-options";
 
 import { useRef, useState } from "react";
 import Image from "next/image";
@@ -30,6 +31,7 @@ type ModalState =
   | null;
 
 type ProductsManagerProps = {
+  references?: RetailerReference[];
   initialProducts: ProductRow[];
   categories: CategoryRow[];
   error?: string | null;
@@ -77,6 +79,7 @@ function categoryName(
 
 export default function ProductsManager({
   initialProducts,
+  references = [],
   categories,
   error: initialError,
 }: ProductsManagerProps) {
@@ -417,6 +420,7 @@ export default function ProductsManager({
           key={modal.mode === "edit" ? modal.product.id : "add"}
           product={modal.mode === "edit" ? modal.product : null}
           categories={categories}
+          references={references}
           onClose={closeModal}
           onSave={handleSave}
           submitting={submitting}

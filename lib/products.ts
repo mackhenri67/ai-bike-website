@@ -59,6 +59,7 @@ export type CatalogProductDetail = {
 };
 
 export type CatalogCategory = {
+  customization_axes?: import("@/components/admin/products/categoryConfig").CategoryAxis[] | null;
   id: string;
   name: string;
   slug: string;
@@ -205,7 +206,7 @@ export async function getCatalogProductBySlug(
     .select(
       `id, name, slug, description, tagline, specs, price, compare_at_price,
        stock, is_featured, is_new_arrival,
-       category:categories(name, slug, is_active),
+       category:categories(name, slug, is_active, customization_axes),
        product_images(url, sort_order, is_primary),
        product_variants(id,size,color,options,retired,price,stock,available)`,
     )
@@ -248,7 +249,7 @@ export async function getCatalogProductBySlug(
     name: data.name,
     description: data.description,
     tagline: data.tagline ?? [],
-    specs: (data.specs ?? []).filter((line: string) => !getCategoryAxes(asSingle(data.category)?.slug).some((axis) => line.split(":")[0].trim() === axis.flag)),
+    specs: (data.specs ?? []).filter((line: string) => !getCategoryAxes(asSingle(data.category)?.slug, asSingle(data.category)?.customization_axes).some((axis) => line.split(":")[0].trim() === axis.flag)),
     price: variants.length
       ? Math.min(...variants.map((v) => v.price))
       : Number(data.price),
@@ -281,7 +282,7 @@ export async function getCatalogCategories(): Promise<
 
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, slug")
+    .select("id, name, slug, customization_axes")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 

@@ -80,8 +80,8 @@ const EQUIPMENT_GROUPS: {
 ];
 
 /** Human-readable customization fields for a category ("No options" when none). */
-function customizationFields(slug: string): string {
-  const labels = getCategoryAxes(slug).map((axis) => axis.label);
+function customizationFields(slug: string, categories: {slug:string;customization_axes?: import("@/components/admin/products/categoryConfig").CategoryAxis[] | null}[]): string {
+  const labels = getCategoryAxes(slug, categories.find(category => category.slug === slug)?.customization_axes).map((axis) => axis.label);
   return labels.length > 0 ? labels.join(", ") : "No options";
 }
 
@@ -157,7 +157,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       ({ slug, fallback }) => ({
         slug,
         name: categoriesByName.get(slug) ?? fallback,
-        customization: customizationFields(slug),
+        customization: customizationFields(slug, categoriesResult ?? []),
         count: countBySlug.get(slug) ?? 0,
       })
     );
@@ -170,7 +170,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       customization:
         children.length > 0
           ? `${children.length} component categories`
-          : customizationFields(group.slug),
+          : customizationFields(group.slug, categoriesResult ?? []),
       count: groupCount,
       ...(children.length > 0 ? { children } : {}),
     };

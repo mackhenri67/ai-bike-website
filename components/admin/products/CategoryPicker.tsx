@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { CategoryRow } from "@/lib/data/types";
-import { getCategoryNote, getStepNumber } from "./categoryConfig";
+import { getStepNumber } from "./categoryConfig";
 import styles from "./CategoryPicker.module.css";
 
 interface CategoryPickerProps {
@@ -19,7 +19,7 @@ export function CategoryPicker({
   const [open, setOpen] = useState(false);
 
   const selected = categories.find((c) => c.id === value);
-  const note = selected ? getCategoryNote(selected.slug) : "";
+  const note = selected ? (selected.customization_axes ?? []).map(axis => axis.label).join(", ") : "";
   const selectedStep = selected ? getStepNumber(selected.slug) : null;
 
   // Partition into builder steps (numbered) and other categories.
@@ -82,7 +82,7 @@ export function CategoryPicker({
               )}
               {builderSteps.map((category) => {
                 const active = category.id === value;
-                const catNote = getCategoryNote(category.slug);
+                const catNote = (category.customization_axes ?? []).map(axis => axis.label).join(", ");
                 const stepNum = getStepNumber(category.slug);
                 return (
                   <button
@@ -117,7 +117,7 @@ export function CategoryPicker({
               )}
               {otherCategories.map((category) => {
                 const active = category.id === value;
-                const catNote = getCategoryNote(category.slug);
+                const catNote = (category.customization_axes ?? []).map(axis => axis.label).join(", ");
                 return (
                   <button
                     key={category.id}

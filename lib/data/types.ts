@@ -8,6 +8,7 @@ export type QueryResult<T> = {
 };
 
 export type CategoryRow = {
+  customization_axes?: import("@/components/admin/products/categoryConfig").CategoryAxis[] | null;
   id: string;
   name: string;
   slug: string;
