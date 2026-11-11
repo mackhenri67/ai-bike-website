@@ -102,14 +102,14 @@ export function useChatThread(endpoint: string, pollMs = 5000, role: "customer" 
     finally { ackBusy.current = false; }
   }, [conversationId, endpoint, messages, role, unread]);
 
-  const send = async (body: string, clientId: string) => {
-    const result = await chatFetch<ChatSent>(endpoint, { operation: "send", body, client_id: clientId });
+  const send = async (body: string, clientId: string, imageId: string | null = null) => {
+    const result = await chatFetch<ChatSent>(endpoint, { operation: "send", body, client_id: clientId, image_id: imageId });
     if (!alive.current) return;
     setConversationId(result.conversation_id);
     setMessages(previous => mergeMessages(previous, [result.message])); setLoaded(true); setError(null);
     window.dispatchEvent(new CustomEvent("lnr:messages-updated"));
     void refresh();
   };
-  return { messages, conversationId, unread, hasMore, loaded, error, loadingOlder, loadOlder, markRead, send, refresh };
+  return { messages, conversationId, unread, hasMore, loaded, error, loadingOlder, loadOlder, markRead, send, refresh, attachmentEndpoint: `${endpoint}/attachment` };
 }
 export type ChatModel = ReturnType<typeof useChatThread>;

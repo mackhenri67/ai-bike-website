@@ -252,3 +252,7 @@
     height: 54px;
   }
 }
+
+.section{margin-top:16px}.container{max-width:1440px;padding:86px clamp(32px,7.8vw,112px);gap:48px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}.content{max-width:none}.eyebrow{font-size:14px;margin-bottom:18px}.heading{font-size:clamp(40px,4.3vw,64px);line-height:1.05;margin-bottom:24px}.body{font-size:18px;line-height:1.6}.button{width:264px;height:60px;font-size:18px}.media{width:100%;max-width:none;height:auto;aspect-ratio:4/3}.mediaInner{position:absolute;inset:0;width:100%;height:100%}
+@media(max-width:900px){.container{padding:60px 40px;gap:32px}.heading{font-size:40px;line-height:1.08}.body{font-size:16px}.button{width:220px;height:50px}}
+@media(max-width:640px){.container{display:flex;flex-direction:column;padding:44px 24px;gap:32px}.heading{font-size:38px;line-height:1.1}.content,.media{width:100%;max-width:none}.media{flex:none;height:auto;aspect-ratio:4/3}.mediaInner{position:absolute;inset:0;height:100%}.button{width:100%;height:50px}}

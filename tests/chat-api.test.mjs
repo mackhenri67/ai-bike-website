@@ -117,3 +117,90 @@ test("Responses are private and report rate-limit/setup failures without success
  app.state.error={code:"PGRST202",message:"Missing function"};
  assert.equal((await app.customer.GET(get())).status,503);
 });
+
+const imageId="40000000-0000-4000-8000-000000000001";
+const png=new Uint8Array([137,80,78,71,13,10,26,10,0]);
+function imageRequest(bytes=png,type="image/png",origin="https://shop.test"){
+ const form=new FormData();form.set("image_id",imageId);form.set("file",new File([bytes],"photo.png",{type}));
+ return new Request("https://shop.test/api/chat/attachment",{method:"POST",headers:{Origin:origin},body:form});
+}
+function imageSetup(){
+ const state={customer:null,admin:null,calls:[],storageCalls:[],uploadError:null,rpcError:null};
+ const storage={
+  upload:async(...args)=>{state.storageCalls.push({operation:"upload",args});return{error:state.uploadError};},
+  download:async(...args)=>{state.storageCalls.push({operation:"download",args});return{data:new Blob([png],{type:"image/png"}),error:null};},
+  remove:async(...args)=>{state.storageCalls.push({operation:"remove",args});return{error:null};},
+ };
+ const service={rpc:async(name,params)=>{
+  state.calls.push({name,params});
+  const data=name==="lnr_chat_prepare_image"?{id:imageId,conversation_id:conversation,path:"private/photo.png",ready:false}:name==="lnr_chat_image"?{path:"private/photo.png",mime_type:"image/png"}:name==="lnr_chat_discard_image"?"private/photo.png":{ok:true};
+  return{data,error:state.rpcError};
+ },storage:{from:(bucket)=>{assert.equal(bucket,"chat-images");return storage;}}};
+ const load=loader({
+  "@/lib/supabase/server":{getUser:async()=>state.customer,getAdminUser:async()=>state.admin},
+  "@/lib/supabase/admin":{getAdminClient:()=>service},
+  "@/lib/data/customer/customers":{getOrCreateCustomer:async()=>({status:"active"})},
+ });
+ return{state,customer:load("app/api/chat/attachment/route.ts"),admin:load("app/api/admin/messages/[id]/attachment/route.ts"),customerImage:load("app/api/chat/images/[id]/route.ts"),adminImage:load("app/api/admin/chat-images/[id]/route.ts")};
+}
+test("Image upload requires the correct login and rejects foreign origins before storage",async()=>{
+ const app=imageSetup();
+ assert.equal((await app.customer.POST(imageRequest())).status,401);
+ app.state.admin=admin;
+ assert.equal((await app.customer.POST(imageRequest())).status,401);
+ app.state.customer=customer;
+ assert.equal((await app.customer.POST(imageRequest(png,"image/png","https://foreign.test"))).status,403);
+ assert.equal(app.state.calls.length,0);assert.equal(app.state.storageCalls.length,0);
+});
+test("Customer and admin uploads fix identity and conversation on the server",async()=>{
+ const app=imageSetup();app.state.customer=customer;
+ assert.equal((await app.customer.POST(imageRequest())).status,200);
+ assert.equal(app.state.calls[0].params.p_user,customer.id);
+ assert.equal(app.state.calls[0].params.p_admin,false);
+ assert.equal(app.state.calls[0].params.p_conversation,null);
+ assert.equal(app.state.storageCalls[0].args[2].upsert,false);
+ assert.equal(app.state.calls.at(-1).name,"lnr_chat_finish_image");
+ app.state.admin=admin;app.state.calls=[];
+ assert.equal((await app.admin.POST(imageRequest(),{params:Promise.resolve({id:conversation})})).status,200);
+ assert.equal(app.state.calls[0].params.p_user,admin.id);
+ assert.equal(app.state.calls[0].params.p_admin,true);
+ assert.equal(app.state.calls[0].params.p_conversation,conversation);
+ const chat=setup();chat.state.customer=customer;
+ assert.equal((await chat.customer.POST(post({...send,body:"",image_id:imageId}))).status,200);
+ assert.equal(chat.state.calls.at(-1).params.p_image,imageId);
+});
+test("Invalid image bytes, wrong MIME types and oversized bodies never reach storage",async()=>{
+ const app=imageSetup();app.state.customer=customer;
+ assert.equal((await app.customer.POST(imageRequest(new TextEncoder().encode("<svg/>")))).status,415);
+ assert.equal((await app.customer.POST(imageRequest(png,"image/jpeg"))).status,415);
+ assert.equal((await app.customer.POST(imageRequest(new Uint8Array(3*1024*1024+1)))).status,400);
+ const oversized=new Request("https://shop.test/api/chat/attachment",{method:"POST",headers:{Origin:"https://shop.test","Content-Type":"multipart/form-data; boundary=test"},body:new Uint8Array(3*1024*1024+70000)});
+ assert.equal((await app.customer.POST(oversized)).status,413);
+ assert.equal(app.state.calls.length,0);assert.equal(app.state.storageCalls.length,0);
+});
+test("Image reads use an authorized private route and draft cleanup uses the owner",async()=>{
+ const app=imageSetup();app.state.customer=customer;
+ const ctx={params:Promise.resolve({id:imageId})};
+ const response=await app.customerImage.GET(get(),ctx);
+ assert.equal(response.status,200);assert.match(response.headers.get("cache-control"),/private.*no-store/);
+ assert.equal(response.headers.get("x-content-type-options"),"nosniff");
+ assert.equal(response.headers.get("content-type"),"image/png");
+ assert.deepEqual(new Uint8Array(await response.arrayBuffer()),png);
+ assert.equal(app.state.calls[0].params.p_user,customer.id);
+ assert.equal((await app.adminImage.GET(get(),ctx)).status,401);
+ app.state.admin=admin;assert.equal((await app.adminImage.GET(get(),ctx)).status,200);
+ assert.equal(app.state.calls.at(-1).params.p_admin,true);
+ assert.equal((await app.customer.DELETE(post({image_id:imageId}))).status,200);
+ assert.equal(app.state.calls.at(-1).params.p_user,customer.id);
+ assert.equal(app.state.storageCalls.at(-1).operation,"remove");
+ const count=app.state.storageCalls.length;
+ app.state.rpcError={code:"P0001",message:"Conversation access required."};
+ assert.equal((await app.customerImage.GET(get(),ctx)).status,403);
+ assert.equal(app.state.storageCalls.length,count);
+});
+test("Retry finishes an upload when Supabase reports an existing object with HTTP 400",async()=>{
+ const app=imageSetup();app.state.customer=customer;
+ app.state.uploadError={statusCode:"400",message:"The resource already exists"};
+ assert.equal((await app.customer.POST(imageRequest())).status,200);
+ assert.equal(app.state.calls.at(-1).name,"lnr_chat_finish_image");
+});

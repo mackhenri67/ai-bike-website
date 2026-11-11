@@ -8,6 +8,7 @@ type ProductCardProps = {
   product: CatalogProduct;
   /** Show the category name under the product name (listing pages). */
   showCategory?: boolean;
+  variant?: "default" | "home";
 };
 
 /**
@@ -19,6 +20,7 @@ type ProductCardProps = {
 export default function ProductCard({
   product,
   showCategory = false,
+  variant = "default",
 }: ProductCardProps) {
   const image = product.image ?? PRODUCT_PLACEHOLDER_SRC;
   const onSale =
@@ -28,7 +30,7 @@ export default function ProductCard({
 
   return (
     <Link href={`/products/${product.slug}`} className={styles.cardLink}>
-      <article className={styles.card}>
+      <article className={`${styles.card} ${variant === "home" ? styles.home : ""}`}>
         <div className={styles.imageWrap}>
           <Image
             src={image}

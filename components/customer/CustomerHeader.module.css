@@ -1,13 +1,8 @@
-/* ==========================================================================
-   Customer navbar — redesigned per reference: taller 74px black bar
-   (#2B2B2B), uppercase 17px nav links, gray search field with gold focus.
-   Only the navbar + search input were resized/reskinned; the cart, account,
-   badge, hamburger and mobile menu remain unchanged.
-   ========================================================================== */
+/* Homepage prototype proportions with a near-black header and thin navigation. */
 
 .header {
   width: 100%;
-  background: #2B2B2B;
+  background: #111111;
   color: #ffffff;
   position: sticky;
   top: 0;
@@ -16,13 +11,13 @@
 
 .inner {
   width: 100%;
-  max-width: 1320px;
-  height: 74px;
+  max-width: 1440px;
+  height: clamp(76px, 7.5vw, 108px);
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 clamp(24px, 5.3vw, 76px);
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: clamp(24px, 3vw, 44px);
 }
 
 /* --- Logo ---------------------------------------------------------------- */
@@ -34,6 +29,8 @@
 }
 
 .logo {
+  width: 50px;
+  height: 74px;
   object-fit: contain;
 }
 
@@ -42,13 +39,14 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: clamp(20px, 2.6vw, 38px);
 }
 
 .navLink {
   color: #ffffff;
-  font-size: 17px;
-  font-weight: 600;
+  font-family: var(--font-condensed), "Arial Narrow", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
   letter-spacing: 0.025em;
   text-transform: none;
   text-decoration: none;
@@ -65,7 +63,7 @@
   position: relative;
   margin-left: auto;
   width: 100%;
-  max-width: 380px;
+  max-width: 300px;
 }
 
 .searchIcon {
@@ -162,7 +160,7 @@
   flex-direction: column;
   gap: 2px;
   padding: 6px 20px 14px;
-  background: #2B2B2B;
+  background: #111111;
   border-top: 1px solid #1f2937;
   max-height: calc(100dvh - 50px);
   overflow-y: auto;
@@ -171,8 +169,9 @@
 .mobileLink {
   padding: 8px 4px;
   color: #ffffff;
-  font-size: 11px;
-  font-weight: 600;
+  font-family: var(--font-condensed), "Arial Narrow", sans-serif;
+  font-size: 18px;
+  font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: none;
 }
@@ -185,12 +184,12 @@
 
 @media (min-width: 1024px) {
   .inner {
-    padding-left: 32px;
-    padding-right: 32px;
+    padding-left: clamp(32px, 5.3vw, 76px);
+    padding-right: clamp(32px, 5.3vw, 76px);
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .inner {
     padding: 0 20px;
     gap: 16px;
@@ -252,3 +251,5 @@
     gap: 12px;
   }
 }
+
+@media(max-width:767px){.logo{width:30px;height:44px}}

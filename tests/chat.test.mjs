@@ -48,6 +48,7 @@ before(async () => {
     "0015_event_emergency_contact.sql",
     "0016_event_payment_proof_replacement.sql",
     "0017_customer_admin_chat.sql",
+    "0018_chat_images.sql",
   ]) {
     try {
       await db.exec(
@@ -174,7 +175,7 @@ test("Browser roles have no direct chat-table or privileged-RPC access",async()=
  finally{await db.exec("reset role");}
 });
 test("Send validation and the per-minute limit preserve idempotent retries",async()=>{
- for(const body of ["", "   ", "x".repeat(2001)])await assert.rejects(send(a,false,null,body),/between 1 and 2000/);
+ for(const body of ["", "   ", "x".repeat(2001)])await assert.rejects(send(a,false,null,body),/message or choose an image/);
  const client=crypto.randomUUID();await send(a,false,null,"Original",client);
  for(let i=1;i<30;i++)await send(a,false,null,`Message ${i}`);
  await assert.rejects(send(),/Too many messages/);
@@ -184,8 +185,34 @@ test("Send validation and the per-minute limit preserve idempotent retries",asyn
 test("Migration can be rerun without losing messages or read markers",async()=>{
  const first=await send(a,false,null,"Literal text <script>alert(1)</script>");
  await read(admin,true,first.conversation_id,first.message.id);
- await db.exec(readFileSync(path.join(root,"supabase/migrations/0017_customer_admin_chat.sql"),"utf8"));
+ await db.exec(readFileSync(path.join(root,"supabase/migrations/0018_chat_images.sql"),"utf8"));
  assert.equal((await thread()).messages[0].body,"Literal text <script>alert(1)</script>");
  assert.equal((await inbox()).unread_count,0);
 });
 
+
+const imageDraft=(user=a,asAdmin=false,cid=null)=>scalar("select public.lnr_chat_prepare_image($1,$2,$3,$4,'image/png',100,'photo.png')",[user,asAdmin,cid,crypto.randomUUID()]);
+const readyImage=async(user=a,asAdmin=false,cid=null)=>{const image=await imageDraft(user,asAdmin,cid);await query("insert into storage.objects(bucket_id,name)values('chat-images',$1)",[image.path]);await query("select public.lnr_chat_finish_image($1,$2,$3)",[user,asAdmin,image.id]);return image;};
+const imageSend=(user,asAdmin,cid,image,text="",client=crypto.randomUUID())=>scalar("select public.lnr_chat_send_with_image($1,$2,$3,$4,$5,$6)",[user,asAdmin,cid,text,client,image]);
+const accessImage=(user,asAdmin,image)=>scalar("select public.lnr_chat_image($1,$2,$3)",[user,asAdmin,image]);
+test("Customer image-only message and admin captioned reply remain private",async()=>{
+ const first=await readyImage();await assert.rejects(accessImage(admin,true,first.id),/not available/);
+ const sent=await imageSend(a,false,null,first.id);assert.equal(sent.message.body,"");assert.equal(sent.message.image.id,first.id);assert.equal((await inbox()).conversations[0].last_message,"Image");assert.equal((await accessImage(admin,true,first.id)).path,first.path);
+ const reply=await readyImage(admin,true,first.conversation_id);await imageSend(admin,true,first.conversation_id,reply.id,"Available frame");assert.equal((await thread()).messages.at(-1).image.id,reply.id);assert.equal((await accessImage(a,false,reply.id)).path,reply.path);await assert.rejects(accessImage(b,false,reply.id),/not available/);
+});
+test("Foreign images, wrong conversations and unfinished uploads cannot be sent",async()=>{
+ const first=await send();const second=await send(b);const image=await readyImage(a,false,first.conversation_id);await assert.rejects(imageSend(b,false,second.conversation_id,image.id),/not available/);await assert.rejects(imageSend(admin,true,first.conversation_id,image.id),/not available/);await assert.rejects(imageDraft(b,false,first.conversation_id),/not available/);const pending=await imageDraft();await assert.rejects(imageSend(a,false,null,pending.id),/not available/);await assert.rejects(query("select public.lnr_chat_finish_image($1,false,$2)",[a,pending.id]),/not found/);
+});
+test("Image retries save once and sent attachments cannot be discarded",async()=>{
+ const image=await readyImage();const client=crypto.randomUUID();const first=await imageSend(a,false,null,image.id,"Caption",client);assert.deepEqual(await imageSend(a,false,null,image.id,"Caption",client),first);await assert.rejects(imageSend(a,false,null,image.id,"Different"),/not available/);await assert.rejects(query("select public.lnr_chat_discard_image($1,false,$2)",[a,image.id]),/already sent/);assert.equal((await thread()).messages.length,1);
+});
+test("Unused drafts can be removed without changing other messages",async()=>{
+ await send();const image=await readyImage();assert.equal(await scalar("select public.lnr_chat_discard_image($1,false,$2)",[a,image.id]),image.path);await assert.rejects(imageSend(a,false,null,image.id),/not available/);await assert.rejects(accessImage(a,false,image.id),/not available/);assert.equal((await thread()).messages.length,1);
+});
+test("Private bucket rejects broad browser reads and enforces size/type limits",async()=>{
+ for(const [mime,size]of [["image/svg+xml",100],["image/png",3145729]])await assert.rejects(scalar("select public.lnr_chat_prepare_image($1,false,null,$2,$3,$4,'bad')",[a,crypto.randomUUID(),mime,size]),/up to 3MB/);
+ const image=await readyImage();await db.exec("create policy test_broad_read on storage.objects for select to authenticated using(true);set role authenticated");try{await assert.rejects(query("select * from public.chat_attachments"),/permission denied/);await assert.rejects(accessImage(a,false,image.id),/permission denied/);assert.equal((await query("select * from storage.objects where bucket_id='chat-images'")).rows.length,0);}finally{await db.exec("reset role;drop policy test_broad_read on storage.objects");}assert.equal(await scalar("select public from storage.buckets where id='chat-images'"),false);
+});
+test("Reapplying image migration preserves attachments, text and read markers",async()=>{
+ await send();const image=await readyImage();const sent=await imageSend(a,false,null,image.id);await read(admin,true,image.conversation_id,sent.message.id);await db.exec(readFileSync(path.join(root,"supabase/migrations/0018_chat_images.sql"),"utf8"));assert.equal((await thread()).messages.length,2);assert.equal((await thread()).messages.at(-1).image.id,image.id);assert.equal((await inbox()).unread_count,0);
+});

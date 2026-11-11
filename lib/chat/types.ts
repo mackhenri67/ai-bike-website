@@ -4,6 +4,7 @@ export type ChatMessage = {
   body: string;
   created_at: string;
   client_id: string;
+  image?: {id:string;name:string;mime_type:string;byte_size:number} | null;
 };
 export type ChatThread = {
   conversation_id: string | null;

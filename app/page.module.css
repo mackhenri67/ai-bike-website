@@ -12,5 +12,5 @@
 /* Vertical rhythm between the product sections (New Arrivals follows the
    hero directly, so only Parts / Accessories get the extra top gap). */
 .gap {
-  margin-top: 0;
+  margin-top: 20px;
 }

@@ -6,14 +6,14 @@ import { isAdmin } from "@/lib/auth/roles";
 import { getOrCreateCustomer } from "@/lib/data/customer/customers";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-class ChatError extends Error {
+export class ChatError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
 export const chatJson = (value: unknown, status = 200) => NextResponse.json(value, {
   status, headers: { "Cache-Control": "private, no-store, max-age=0", "X-Content-Type-Options": "nosniff" },
 });
 export async function chatRequest(work: () => Promise<unknown>) {
-  try { return chatJson(await work()); }
+  try { const result = await work(); return result instanceof Response ? result : chatJson(result); }
   catch (error) {
     return chatJson({ error: error instanceof ChatError ? error.message : "Messages could not be loaded. Please try again." }, error instanceof ChatError ? error.status : 500);
   }
@@ -41,15 +41,18 @@ export async function chatRpc(name: string, params: Record<string, unknown>) {
   const { data, error } = await client.rpc(name, params);
   if (error) {
     if (["PGRST202", "42P01", "42883"].includes(error.code)) throw new ChatError("Messaging is not set up yet. Please contact the shop administrator.", 503);
-    if (error.message.includes("Too many messages")) throw new ChatError(error.message, 429);
+    if (error.message.startsWith("Too many")) throw new ChatError(error.message, 429);
     if (error.code === "P0001") throw new ChatError(error.message, /required|access/.test(error.message) ? 403 : 400);
     throw new ChatError("Your message could not be saved. Please try again.", 500);
   }
   return data;
 }
-export async function chatBody(request: Request): Promise<Record<string, unknown>> {
+export function chatOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if ((origin && origin !== new URL(request.url).origin) || request.headers.get("sec-fetch-site") === "cross-site") throw new ChatError("Request not allowed.", 403);
+}
+export async function chatBody(request: Request): Promise<Record<string, unknown>> {
+  chatOrigin(request);
   if (!request.headers.get("content-type")?.startsWith("application/json")) throw new ChatError("Send a JSON message.", 415);
   const text = await request.text();
   if (text.length > 14000) throw new ChatError("The message is too long.", 413);
@@ -68,11 +71,12 @@ export async function postChat(request: Request, admin: boolean, conversation: s
     await chatRpc("lnr_chat_read", { p_user: user.id, p_admin: admin, p_conversation: id, p_through: through });
     return { ok: true };
   }
-  if (body.operation !== "send" || typeof body.body !== "string" || !body.body.trim() || body.body.trim().length > 2000) throw new ChatError("Enter a message between 1 and 2000 characters.");
+  const imageId = body.image_id == null ? null : chatUuid(body.image_id);
+  if (body.operation !== "send" || typeof body.body !== "string" || (!body.body.trim() && !imageId) || body.body.trim().length > 2000) throw new ChatError("Enter a message or choose an image. Text can contain up to 2000 characters.");
   const clientId = chatUuid(body.client_id);
   if (!admin) {
     const customer = await getOrCreateCustomer(user);
     if (!customer || customer.status !== "active") throw new ChatError("An active customer account is required.", 403);
   }
-  return chatRpc("lnr_chat_send", { p_user: user.id, p_admin: admin, p_conversation: conversation, p_body: body.body.trim(), p_client: clientId });
+  return chatRpc("lnr_chat_send_with_image", { p_user: user.id, p_admin: admin, p_conversation: conversation, p_body: body.body.trim(), p_client: clientId, p_image: imageId });
 }

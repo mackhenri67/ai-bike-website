@@ -1,4 +1,6 @@
 import { STORE_INFO } from "./data";
+import StoreMap from "./StoreMap";
+import { STORE_COORDINATES } from "@/lib/store-location";
 import { MapPinIcon } from "./icons";
 import styles from "./StoreSection.module.css";
 
@@ -7,10 +9,8 @@ import styles from "./StoreSection.module.css";
  * directions button. The embedded map supports panning and zooming.
  */
 export default function StoreSection() {
-  const destination = [STORE_INFO.name, STORE_INFO.addressLine1, STORE_INFO.addressLine2].join(" ");
-  const mapQuery = encodeURIComponent(destination);
-  const mapUrl = `https://www.google.com/maps?q=${mapQuery}&z=16&output=embed`;
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${mapQuery}`;
+  const { latitude, longitude } = STORE_COORDINATES;
+  const directionsUrl = `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=;${latitude},${longitude}`;
   return (
     <section className={styles.section}>
       <div className={styles.container}>
@@ -34,14 +34,7 @@ export default function StoreSection() {
         </div>
 
         <div className={styles.mapWrap}>
-          <iframe
-            src={mapUrl}
-            title={`Interactive map of ${STORE_INFO.name}, Tabaco City`}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
-            className={styles.mapFrame}
-          />
+          <StoreMap/>
         </div>
       </div>
     </section>

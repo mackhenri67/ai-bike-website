@@ -89,3 +89,7 @@
     height: 280px;
   }
 }
+
+.info{text-align:center}.section{padding:52px 0 90px}.container{max-width:1280px;padding:0 48px;grid-template-columns:minmax(240px,1fr) minmax(0,2.3fr);gap:56px}.storeTitle{font-size:24px}.address{font-size:16px;line-height:1.6}.hours{font-size:14px;margin:28px 0}.directions{height:46px;min-width:220px;justify-content:center;font-size:13px}.mapWrap{height:auto;min-height:300px;aspect-ratio:2/1}
+@media(max-width:900px){.container{padding:0 28px;grid-template-columns:minmax(190px,1fr) minmax(0,2fr);gap:28px}.storeTitle{font-size:21px}.address{font-size:14px}.directions{min-width:180px}.mapWrap{min-height:280px}}
+@media(max-width:640px){.section{padding:40px 0 56px}.container{padding:0 20px;grid-template-columns:1fr;gap:30px}.hours{margin:18px 0}.mapWrap{aspect-ratio:1.4;min-height:280px}}

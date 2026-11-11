@@ -34,7 +34,7 @@ export default function ProductSection({
         {products.length === 0 ? <p className={styles.empty}>No available products in this section yet.</p> : null}
         <div className={styles.grid}>
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={product} variant="home" />
           ))}
         </div>
 
