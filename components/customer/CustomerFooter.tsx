@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { LOGO_SRC, STORE_INFO } from "./data";
+import { FOOTER_LOGO_SRC, STORE_INFO } from "./data";
 import { FacebookIcon, MailIcon } from "./icons";
 import styles from "./CustomerFooter.module.css";
 
@@ -36,7 +36,7 @@ export default function CustomerFooter() {
         <div className={styles.brand}>
           <Link href="/" aria-label="LNR Cycle Center home">
           <Image
-            src={LOGO_SRC}
+            src={FOOTER_LOGO_SRC}
             alt="LNR Cycle Center"
             width={63}
             height={73}

@@ -1,10 +1,4 @@
-/* ==========================================================================
-   Products / Bike Equipment — page shell, header and container.
-   Header typography follows the LnR design system:
-   Barlow Condensed eyebrow, Archivo display heading, Inter body copy.
-   The interactive filter/grid live in BikeEquipment.module.css.
-   ========================================================================== */
-
+/* Listing heading geometry lives in the shared ListingPageHeader component. */
 .page {
   min-height: 100vh;
   display: flex;
@@ -12,80 +6,6 @@
 }
 
 .section {
-  background: linear-gradient(to bottom, #fff 0, #fff 215px, #f8f9fa 215px);
+  background: #f8f9fa;
   flex: 1;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 48px 32px 80px;
-}
-
-/* --- Page header ---------------------------------------------------------- */
-
-.header {
-  display: flex;
-  flex-direction: column;
-
-  min-height: 166px;
-}
-
-/* Brand eyebrow — "LnR Cycle Center" */
-.eyebrow {
-  margin: 0;
-  font-family: "Barlow Condensed", "Archivo", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: #e1b93c; /* brand accent used across the customer UI */
-
-  display: none;
-}
-
-/* Main heading — "BIKE EQUIPMENT" */
-.title {
-  margin: 8px 0 0;
-  font-family: var(--font-inter), sans-serif;
-  font-weight: 800;
-  font-size: 36px;
-  line-height: 1.2;
-  letter-spacing: 0.01em;
-  text-transform: none;
-  color: #111827;
-}
-
-/* Description — normal readable body copy */
-.description {
-  margin: 20px 0 24px;
-  max-width: 480px;
-  font-family: var(--font-inter), "Inter", "Segoe UI", Arial, sans-serif;
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 1.625; /* leading-relaxed */
-  color: #4b5563;
-}
-
-/* --- Responsive ----------------------------------------------------------- */
-
-@media (min-width: 640px) {
-  .title {
-    font-size: 36px;
-    line-height: 1;
-  }
-}
-
-@media (min-width: 1024px) {
-  .container {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-}
-
-@media (max-width: 767px) {
-  .container {
-    padding: 40px 20px 64px;
-  }
 }

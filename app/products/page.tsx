@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import CustomerHeader from "@/components/customer/CustomerHeader";
 import CustomerFooter from "@/components/customer/CustomerFooter";
+import ListingPageHeader from "@/components/customer/ListingPageHeader";
+import listingStyles from "@/components/customer/ListingPageHeader.module.css";
 import BikeEquipment, {
   type EquipmentCategoryRow,
 } from "@/components/customer/BikeEquipment/BikeEquipment";
@@ -188,17 +190,11 @@ export default async function ProductsPage({ searchParams }: Props) {
 
       <main>
         <section className={styles.section}>
-          <div className={styles.container}>
-            {/* Page header — LnR Cycle Center / BROWSE PRODUCTS / description */}
-            <header className={styles.header}>
-              <p className={styles.eyebrow}>LnR Cycle Center</p>
-              <h1 className={styles.title}>Products</h1>
-              <p className={styles.description}>
-                Complete bikes, components and accessories everything below is
-                on our shop floor in Tabaco City.
-              </p>
-            </header>
-
+          <ListingPageHeader title="Products" light>
+            Complete bikes, components and accessories everything below is
+            on our shop floor in Tabaco City.
+          </ListingPageHeader>
+          <div className={`${listingStyles.container} ${listingStyles.content}`}>
             <BikeEquipment
               products={products}
               rows={rows}

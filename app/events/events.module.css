@@ -1,30 +1,6 @@
 .page {
   min-height: 70vh;
   background: #f7f7f8;
-  padding: 40px 20px 64px;
-}
-
-.container {
-  max-width: 1080px;
-  margin: 0 auto;
-}
-
-.header {
-  margin-bottom: 28px;
-}
-
-.title {
-  font-size: 30px;
-  font-weight: 800;
-  color: #111827;
-  margin: 0 0 8px;
-}
-
-.subtitle {
-  margin: 0;
-  color: #6b7280;
-  font-size: 15px;
-  max-width: 620px;
 }
 
 .grid {
@@ -32,7 +8,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 22px;
 }
 
@@ -161,7 +137,7 @@
   font-size: 14px;
 }
 
-.tabs { display: flex; gap: 12px; margin: 28px 0 32px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 12px; margin: 0 0 32px; flex-wrap: wrap; }
 .tab, .activeTab { display: inline-flex; padding: 10px 20px; border-radius: 5px; font-size: 14px; font-weight: 700; text-decoration: none; border: 1px solid #e2e4e8; color: #4b5563; background: transparent; }
 .activeTab { background: #e8c332; color: #141414; border-color: #e8c332; }
 .tab:hover { border-color: #b99b28; }

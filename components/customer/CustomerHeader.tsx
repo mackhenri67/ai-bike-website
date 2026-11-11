@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { LOGO_SRC } from "./data";
+import { HEADER_LOGO_SRC } from "./data";
 import { useCart } from "./CartContext";
 import AccountMenu from "./AccountMenu";
 import {
@@ -57,7 +57,7 @@ export default function CustomerHeader() {
 
         <Link href="/" className={styles.brand} aria-label="LNR Cycle Center home">
           <Image
-            src={LOGO_SRC}
+            src={HEADER_LOGO_SRC}
             alt="LNR Cycle Center"
             width={22}
             height={30}

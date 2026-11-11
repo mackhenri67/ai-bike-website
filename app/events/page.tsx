@@ -3,6 +3,8 @@ import Link from "next/link";
 import { listPublishedEvents } from "@/lib/data/customer/events";
 import CustomerHeader from "@/components/customer/CustomerHeader";
 import CustomerFooter from "@/components/customer/CustomerFooter";
+import ListingPageHeader from "@/components/customer/ListingPageHeader";
+import listingStyles from "@/components/customer/ListingPageHeader.module.css";
 import styles from "./events.module.css";
 
 export const dynamic = "force-dynamic";
@@ -38,14 +40,11 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
     <>
       <CustomerHeader />
       <main className={styles.page}>
-        <div className={styles.container}>
-          <header className={styles.header}>
-            <h1 className={styles.title}>Events</h1>
-            <p className={styles.subtitle}>
-              Join our fun rides, races and community events. Reserve your slot
-              and pay securely with GCash.
-            </p>
-          </header>
+        <ListingPageHeader title="Events">
+          Join our fun rides, races and community events. Reserve your slot
+          and pay securely with GCash.
+        </ListingPageHeader>
+        <div className={`${listingStyles.container} ${listingStyles.content}`}>
 
           <nav className={styles.tabs} aria-label="Event filters">
             <Link href="/events" className={!showAll ? styles.activeTab : styles.tab} aria-current={!showAll ? "page" : undefined}>Upcoming Events</Link>

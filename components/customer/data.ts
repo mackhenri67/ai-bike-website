@@ -9,7 +9,10 @@
  * storefront and the admin panel always stay in sync.
  */
 
-export const LOGO_SRC = "/Customerpageimages/lnr%201.png";
+export const HEADER_LOGO_SRC = "/assets/brand/logo-header.png";
+export const FOOTER_LOGO_SRC = "/assets/brand/logo-footer.png";
+// Kept for components outside the storefront that still expect the original constant.
+export const LOGO_SRC = HEADER_LOGO_SRC;
 
 /**
  * Shown on product cards / detail pages when a product has no image rows yet
