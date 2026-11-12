@@ -2,7 +2,7 @@
 export const PART_CATEGORY_SLUGS = new Set([
   "parts", "frameset", "handlebar", "stem", "seatpost", "saddle", "wheelset",
   "tires", "front-derailleur", "rear-derailleur", "crankset", "cassette",
-  "chain", "brakeset", "rotors", "pedals", "groupset",
+  "chain", "brakeset", "rotors", "pedals", "groupset", "bar-tape-grips",
 ]);
 export function isPartProduct(product: { categorySlug: string | null }): boolean {
   return product.categorySlug !== null && PART_CATEGORY_SLUGS.has(product.categorySlug);
