@@ -15,7 +15,18 @@ export interface CategoryConfig {
 }
 
 // Builder navigation mapping only; customization values are stored in Supabase.
-const builderSteps: Record<string, number> = {"frameset": 1, "handlebar": 2, "stem": 3, "seatpost": 4, "saddle": 5, "wheelset": 6, "tires": 7, "front-derailleur": 8, "rear-derailleur": 9, "crankset": 10, "cassette": 11, "chain": 12, "brakeset": 13, "rotors": 14, "pedals": 15};
+const builderSteps: Record<string, number> = {
+  frameset: 1,
+  handlebar: 2,
+  "bar-tape-grips": 3,
+  stem: 4,
+  seatpost: 5,
+  saddle: 6,
+  wheelset: 7,
+  tires: 8,
+  groupset: 9,
+  pedals: 10,
+};
 export function getCategoryAxes(slug: string | null | undefined, axes?: CategoryAxis[] | null): CategoryAxis[] { return axes ?? []; }
 export function getCategoryNote(): string { return ""; }
 export function getStepNumber(slug: string | null | undefined): number | null { return slug ? builderSteps[slug] ?? null : null; }
