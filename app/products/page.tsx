@@ -61,6 +61,7 @@ const EQUIPMENT_GROUPS: {
     children: [
       { slug: "frameset", fallback: "Frameset" },
       { slug: "handlebar", fallback: "Handlebar" },
+      { slug: "bar-tape-grips", fallback: "Bar Tape / Grips" },
       { slug: "stem", fallback: "Stem" },
       { slug: "seatpost", fallback: "Seatpost" },
       { slug: "saddle", fallback: "Saddle" },

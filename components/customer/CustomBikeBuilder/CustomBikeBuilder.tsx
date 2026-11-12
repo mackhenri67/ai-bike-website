@@ -17,14 +17,14 @@ import type {
 import styles from "./CustomBikeBuilder.module.css";
 
 /**
- * "Custom Bike Builder" — a 15-step product configurator.
+ * "Custom Bike Builder" — a 10-step product configurator.
  *
  * Flow:
- *   1. Landing   – hero, price, optional AI prompt + the 15-part checklist,
+ *   1. Landing   – hero, price, optional AI prompt + the 10-part checklist,
  *                  then "Start building".
- *   2. Builder   – steps 1..15. For each step the customer picks one part and
+ *   2. Builder   – steps 1..10. For each step the customer picks one part and
  *                  answers that part's customization axes (size/colour, etc.).
- *   3. Review    – the full 15-part build with line total + grand total.
+ *   3. Review    – the full 10-part build with line total + grand total.
  *
  * On "Add to cart" every chosen part becomes its own cart line, so the whole
  * build appears alongside normal storefront items in the existing cart,

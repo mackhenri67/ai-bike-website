@@ -90,19 +90,34 @@ type StepRow = {
 const SLUG_TO_STEP: Record<string, number> = {
   frameset: 1,
   handlebar: 2,
-  stem: 3,
-  seatpost: 4,
-  saddle: 5,
-  wheelset: 6,
-  tires: 7,
-  "front-derailleur": 8,
-  "rear-derailleur": 9,
-  crankset: 10,
-  cassette: 11,
-  chain: 12,
-  brakeset: 13,
-  rotors: 14,
-  pedals: 15,
+  "bar-tape-grips": 3,
+  stem: 4,
+  seatpost: 5,
+  saddle: 6,
+  wheelset: 7,
+  tires: 8,
+  groupset: 9,
+  pedals: 10,
+};
+
+/**
+ * Stable database step numbers are intentionally kept separate from the
+ * 10-step customer-facing order. Legacy component definitions 8–14 remain
+ * in Supabase for reference, but they are not returned as individual steps.
+ *
+ * DB step 16 = Bar Tape / Grips; DB step 17 = Groupset.
+ */
+const DB_STEP_TO_DISPLAY_STEP: Record<number, number> = {
+  1: 1,
+  2: 2,
+  16: 3,
+  3: 4,
+  4: 5,
+  5: 6,
+  6: 7,
+  7: 8,
+  17: 9,
+  15: 10,
 };
 
 /** PostgREST embeds a to-one relation as a single object, not an array. */
@@ -177,15 +192,31 @@ export async function getBikeBuilderSteps(): Promise<
   }
 
   const rawSteps = (stepRows as unknown as StepRow[] | null) ?? [];
+  const availableDbSteps = new Set(rawSteps.map((row) => Number(row.step_number)));
+  const missingDisplaySteps = Object.entries(DB_STEP_TO_DISPLAY_STEP)
+    .filter(([databaseStep]) => !availableDbSteps.has(Number(databaseStep)))
+    .map(([, displayStep]) => displayStep)
+    .sort((a, b) => a - b);
 
-  const steps: BuilderStep[] = rawSteps.map((s) => ({
-    stepNumber: Number(s.step_number),
-    name: s.name,
-    description: s.description,
-    axes: s.customization_axes ?? [],
-    notice: s.notice ?? null,
-    products: [],
-  }));
+  if (missingDisplaySteps.length > 0) {
+    return {
+      data: null,
+      error:
+        "The 10-step Bike Builder setup is incomplete. Please apply Supabase migration 0021 before using the builder.",
+    };
+  }
+
+  const steps: BuilderStep[] = rawSteps
+    .filter((row) => DB_STEP_TO_DISPLAY_STEP[Number(row.step_number)] !== undefined)
+    .map((s) => ({
+      stepNumber: DB_STEP_TO_DISPLAY_STEP[Number(s.step_number)],
+      name: s.name,
+      description: s.description,
+      axes: s.customization_axes ?? [],
+      notice: s.notice ?? null,
+      products: [],
+    }))
+    .sort((a, b) => a.stepNumber - b.stepNumber);
 
   const stepByNumber = new Map<number, BuilderStep>();
   for (const step of steps) {
