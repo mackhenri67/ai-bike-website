@@ -74,6 +74,7 @@ const EQUIPMENT_GROUPS: {
       { slug: "brakeset", fallback: "Brakeset" },
       { slug: "rotors", fallback: "Rotors" },
       { slug: "pedals", fallback: "Pedals" },
+      { slug: "groupset", fallback: "Groupset" },
     ],
   },
   { slug: "accessories", fallback: "Accessories", children: [] },
