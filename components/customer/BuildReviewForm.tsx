@@ -27,14 +27,17 @@ export default function BuildReviewForm({
     setError(null);
     setMessage(null);
     const form = formRef.current;
-    if (!form) return;
+    if (!form) {
+      setBusy(false);
+      return;
+    }
     const data = new FormData(form);
     data.set("rating", String(rating));
     try {
       const result = await submitBuildReview(data);
       if (result.error) setError(result.error);
       else {
-        setMessage("Thank you. Your review was submitted for shop approval.");
+        setMessage("Your review is now live. Thank you for sharing your build!");
         form.reset();
         setRating(5);
         router.refresh();
@@ -46,12 +49,11 @@ export default function BuildReviewForm({
     }
   }
 
-  if (review && review.status !== "rejected") {
+  if (review) {
     return (
       <div className={styles.status}>
-        <strong>{review.status === "approved" ? "Review published" : "Review awaiting approval"}</strong>
+        <strong>Your review is published</strong>
         <span>{review.rating}/5 stars · {review.review_text}</span>
-        {review.admin_note ? <small>Shop response: {review.admin_note}</small> : null}
         {review.image_url ? <img src={review.image_url} alt="Your submitted build review" /> : null}
       </div>
     );
@@ -61,8 +63,8 @@ export default function BuildReviewForm({
     <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
       <input type="hidden" name="orderId" value={orderId} />
       <div className={styles.heading}>
-        <strong>{review?.status === "rejected" ? "Update your build review" : "Review your custom build"}</strong>
-        <span>Share a photo and a few words about your received build.</span>
+        <strong>Review your custom build</strong>
+        <span>Your review and photo will be published as soon as you submit.</span>
       </div>
       <div className={styles.stars} role="radiogroup" aria-label="Rating">
         {[1, 2, 3, 4, 5].map((value) => (
@@ -71,18 +73,18 @@ export default function BuildReviewForm({
       </div>
       <input type="hidden" name="rating" value={rating} />
       <label className={styles.label}>Your review
-        <textarea name="reviewText" required minLength={5} maxLength={600} defaultValue={review?.review_text ?? ""} placeholder="How was your custom build?" />
+        <textarea name="reviewText" required minLength={5} maxLength={600} placeholder="How was your custom build?" />
       </label>
       <label className={styles.label}>Build photo
         <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required />
       </label>
       <label className={styles.consent}>
         <input type="checkbox" name="publicConsent" required />
-        I agree that my review, display name, and build photo may appear publicly if approved by LNR Cycle Center.
+        I agree that my review, display name, and build photo will be displayed publicly.
       </label>
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
       {message ? <p className={styles.success} role="status">{message}</p> : null}
-      <button className={styles.submit} type="submit" disabled={busy}>{busy ? "Submitting…" : review?.status === "rejected" ? "Resubmit review" : "Submit review"}</button>
+      <button className={styles.submit} type="submit" disabled={busy}>{busy ? "Publishing…" : "Publish review"}</button>
     </form>
   );
 }
