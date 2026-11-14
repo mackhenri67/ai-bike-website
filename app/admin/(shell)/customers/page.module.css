@@ -12,3 +12,9 @@
 
 /* Unified LNR admin design */
 .page{width:100%;max-width:none}.title{margin:0}.pageDescription{margin:8px 0 28px;color:#7a827c;font-size:13px;line-height:1.65}
+
+
+.tabs{display:flex;gap:8px;align-items:center;margin:0 0 20px;border-bottom:1px solid #e7ebe4;padding-bottom:12px}
+.tab,.activeTab{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 16px;border:1px solid #e2e7df;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;color:#586356;background:#fff;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.tab:hover{background:#f7f8f5;border-color:#ccd4c8;color:#253126}
+.activeTab{background:#e8c332;border-color:#e8c332;color:#171717}
