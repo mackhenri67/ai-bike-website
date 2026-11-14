@@ -19,29 +19,14 @@ create table if not exists public.customer_build_reviews (
   review_text text not null check (length(btrim(review_text)) between 5 and 600),
   image_path text not null,
   public_display_name text not null,
-  status text not null default 'approved'
-    check (status in ('approved', 'rejected')),
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected')),
   admin_note text,
   reviewed_at timestamptz,
   reviewed_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-
--- Previous submissions were held for approval. Publish those existing rows
--- as part of the switch to immediate customer publishing.
-update public.customer_build_reviews
-  set status = 'approved'
-  where status = 'pending';
-
--- Normalize a previously created development copy of this migration as well.
-alter table public.customer_build_reviews
-  alter column status set default 'approved';
-alter table public.customer_build_reviews
-  drop constraint if exists customer_build_reviews_status_check;
-alter table public.customer_build_reviews
-  add constraint customer_build_reviews_status_check
-  check (status in ('approved', 'rejected'));
 
 create index if not exists customer_build_reviews_status_created_idx
   on public.customer_build_reviews(status, created_at desc);
