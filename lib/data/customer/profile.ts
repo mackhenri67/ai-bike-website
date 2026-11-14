@@ -4,11 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { CustomerRow, OrderRow } from "@/lib/data/types";
 import { getCustomerByAuthUserId } from "./customers";
 import { getCustomerDefaultLocation } from "./locations";
+import { listCustomerBuildReviews } from "./build-reviews";
 import type { CustomerLocation } from "./types";
 
 const ORDER_SELECT = `
   id, order_number, customer_id, customer_name, customer_email, customer_phone,
-  shipping_address, subtotal, shipping_fee, discount, total,
+  custom_build_id, shipping_address, subtotal, shipping_fee, discount, total,
   payment_method, payment_status, status, payment_reference, notes,
   created_at, updated_at,
   gcash_payments(screenshot_url,sender_name,reference_number,status),
@@ -54,9 +55,16 @@ export async function listCustomerOrders(
     .order("created_at", { ascending: false });
 
   if (error || !data) return null;
+  const reviewsByOrder = await listCustomerBuildReviews(customerId);
   return Promise.all((data as unknown as OrderRow[]).map(async (order) => {
     const payment = Array.isArray(order.gcash_payments) ? order.gcash_payments[0] : order.gcash_payments;
     const url = payment?.screenshot_url ? await paymentProofUrl(payment.screenshot_url) : null;
-    return { ...order, gcash_payments: undefined, payment_receipt: payment ? { url: url || null, sender: payment.sender_name, reference: payment.reference_number, status: payment.status } : null };
+    return {
+      ...order,
+      custom_build_id: order.custom_build_id ?? null,
+      build_review: reviewsByOrder.get(order.id) ?? null,
+      gcash_payments: undefined,
+      payment_receipt: payment ? { url: url || null, sender: payment.sender_name, reference: payment.reference_number, status: payment.status } : null,
+    };
   }));
 }
