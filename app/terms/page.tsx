@@ -20,7 +20,7 @@ const sections = [
   },
   {
     "title": "Delivery, cancellations, returns and refunds",
-    "text": "Provide a complete delivery location and reachable contact details. Delivery fees and arrangements should be confirmed before fulfillment. To cancel or report missing, defective or incorrect items, contact the shop promptly with your order number. Cancellation availability depends on fulfillment status. The shop will assess returns and refunds based on the transaction, applicable warranties and Philippine consumer law. These terms do not remove statutory remedies or impose a blanket no-return rule for defective goods."
+    "text": "Provide a complete delivery location and reachable contact details. Delivery fees and arrangements should be confirmed before fulfillment. To cancel or report missing, defective or incorrect items, contact the shop promptly with your order number. Cancellation availability depends on fulfillment status. For eligible delivered items, My Orders provides an online return/refund request form for three days from the recorded completion time. Submit a reason and photo or video evidence for admin review. After approval, select rider pickup or store drop-off and coordinate the arrangement with the shop. Approval does not automatically transfer money or book a rider. Contact the shop for assistance outside the online submission window. The shop will assess returns and refunds based on the transaction, applicable warranties and Philippine consumer law. These terms do not remove statutory remedies or impose a blanket no-return rule for defective goods."
   },
   {
     "title": "Events",

@@ -7,16 +7,20 @@ const sections = [
     "text": "When you create an account, we collect your name, email address, password through our authentication service, optional phone number, and saved delivery address and coordinates. When you use our services, we process orders, selected bicycle components, payment references and uploaded payment proofs, event registrations, and relevant account and transaction records. Hosting and service providers may also process technical information such as IP addresses and request logs."
   },
   {
+    "title": "Return and refund evidence",
+    "text": "When you request a return or refund, we process the ordered item, your reason, uploaded photos or videos, review history, and any pickup address and contact information you provide. Evidence is kept in private storage and made available to your account and authorized shop administrators for assessment and follow-up. Provide only files relevant to the issue and avoid including unrelated personal or financial information."
+  },
+  {
     "title": "How we use information",
     "text": "We use information to create and secure accounts, deliver orders, verify payments, manage stock and event registrations, respond to requests, and maintain the website. Account and order processing supports the services you request; security and record keeping also support legitimate business needs and applicable obligations. Browser location access is requested through your device permission controls; you may use the location picker manually instead. The sign-up agreement is not permission for unrelated marketing."
   },
   {
     "title": "AI bicycle recommendations",
-    "text": "If you request an AI recommendation, the text you enter, your stated budget, and relevant product catalogue information are sent to Google Gemini to generate suggestions. Avoid entering names, contact details, payment information, or other sensitive information in the prompt. AI suggestions are advisory; shop review is needed for fit and compatibility. Google processes the request under its applicable service terms and privacy practices."
+    "text": "If you request an AI recommendation, the text you enter, your stated budget, and relevant product catalogue information are sent to Groq to generate suggestions. Avoid entering names, contact details, payment information, or other sensitive information in the prompt. AI suggestions are advisory; shop review is needed for fit and compatibility. Groq processes the request under its applicable service terms and privacy practices."
   },
   {
     "title": "Service providers and sharing",
-    "text": "Our website uses Supabase for authentication, database and file storage, Vercel when hosted there, and Google Gemini for AI recommendations. Authorized shop personnel and providers supporting these services may process information needed for their tasks. Delivery information may be shared with those fulfilling your order. Providers may process information outside the Philippines. Information may also be disclosed where required by law or necessary to address fraud and security incidents."
+    "text": "Our website uses Supabase for authentication, database and file storage, Vercel when hosted there, and Groq for AI recommendations. Authorized shop personnel and providers supporting these services may process information needed for their tasks. Delivery information may be shared with those fulfilling your order. Providers may process information outside the Philippines. Information may also be disclosed where required by law or necessary to address fraud and security incidents."
   },
   {
     "title": "Cookies and location",

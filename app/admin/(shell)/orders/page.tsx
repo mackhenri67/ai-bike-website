@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { listOrders } from "@/lib/data/admin/orders";
-import OrdersManager from "@/components/admin/orders/OrdersManager";
+import OrdersWorkspace from "@/components/admin/orders/OrdersWorkspace";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ export default async function AdminOrdersPage() {
       <h1 className={styles.title}>Orders</h1>
       <p className={styles.pageDescription}>Review purchases, verify payments, and manage fulfillment.</p>
 
-      <OrdersManager
+      <OrdersWorkspace
         initialOrders={result.data ?? []}
         error={result.error ?? undefined}
       />
