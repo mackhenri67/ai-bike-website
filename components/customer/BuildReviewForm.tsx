@@ -49,7 +49,7 @@ export default function BuildReviewForm({
     }
   }
 
-  if (review) {
+  if (review?.status === "approved") {
     return (
       <div className={styles.status}>
         <strong>Your review is published</strong>
@@ -73,7 +73,7 @@ export default function BuildReviewForm({
       </div>
       <input type="hidden" name="rating" value={rating} />
       <label className={styles.label}>Your review
-        <textarea name="reviewText" required minLength={5} maxLength={600} placeholder="How was your custom build?" />
+        <textarea name="reviewText" required minLength={5} maxLength={600} defaultValue={review?.status === "rejected" ? review.review_text : ""} placeholder="How was your custom build?" />
       </label>
       <label className={styles.label}>Build photo
         <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required />
