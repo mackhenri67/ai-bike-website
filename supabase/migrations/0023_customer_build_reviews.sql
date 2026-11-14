@@ -18,6 +18,7 @@ create table if not exists public.customer_build_reviews (
   rating smallint not null check (rating between 1 and 5),
   review_text text not null check (length(btrim(review_text)) between 5 and 600),
   image_path text not null,
+  public_display_name text not null,
   status text not null default 'pending'
     check (status in ('pending', 'approved', 'rejected')),
   admin_note text,
