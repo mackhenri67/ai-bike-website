@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { saveDirectCheckout } from "../direct-checkout";
 import type { AddToCartInput } from "../cart-store";
 import { legacyOptions } from "@/lib/product-options";
-import { builderAxes, builderVariant } from "@/lib/builder-options";
+import { builderAxes, builderStartingPrice, builderVariant } from "@/lib/builder-options";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -120,6 +120,10 @@ export default function CustomBikeBuilder({
   const orderedSteps = useMemo(
     () => [...steps].sort((a, b) => a.stepNumber - b.stepNumber),
     [steps],
+  );
+  const startingPrice = useMemo(
+    () => builderStartingPrice(orderedSteps),
+    [orderedSteps],
   );
 
   const startBuilding = () => {
@@ -362,13 +366,7 @@ export default function CustomBikeBuilder({
           <div className={styles.priceRow}>
             <span className={styles.priceLabel}>Starts at</span>
             <span className={styles.priceValue}>
-              {formatPeso(
-                orderedSteps.reduce(
-                  (sum, step) =>
-                    sum + (step.products.find((p) => p.stock > 0)?.price ?? 0),
-                  0,
-                ),
-              )}
+              {startingPrice === null ? "Unavailable" : formatPeso(startingPrice)}
             </span>
           </div>
 

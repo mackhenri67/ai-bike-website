@@ -28,3 +28,31 @@ test('Canonical combination keys ignore object ordering; labels include all choi
 test('Legacy size/color rows remain selectable after migration',()=>{
  assert.equal(builder.builderVariant({variants:[{id:'old',size:'S',color:'Black',stock:2,available:true}]},{Size:'S',Color:'Black'}).id,'old');
 });
+
+
+test('Starting price sums the cheapest in-stock product in every builder category', () => {
+ const steps = [
+  { products: [{ price: 900, stock: 2 }, { price: 700, stock: 1 }, { price: 300, stock: 0 }] },
+  { products: [{ price: 1500, stock: 3 }, { price: 1200, stock: 0 }] },
+  { products: [{ price: 400, stock: 5 }] },
+ ];
+ assert.equal(builder.builderStartingPrice(steps), 2300);
+});
+
+test('Starting price recalculates when catalogue products are added or removed', () => {
+ const firstCategory = [{ price: 900, stock: 2 }, { price: 700, stock: 1 }];
+ const secondCategory = [{ price: 1500, stock: 3 }];
+ const steps = [{ products: firstCategory }, { products: secondCategory }];
+
+ assert.equal(builder.builderStartingPrice(steps), 2200);
+ firstCategory.push({ price: 600, stock: 1 });
+ assert.equal(builder.builderStartingPrice(steps), 2100);
+ firstCategory.splice(firstCategory.findIndex((product) => product.price === 600), 1);
+ assert.equal(builder.builderStartingPrice(steps), 2200);
+});
+
+test('Starting price is unavailable when a required category has no in-stock products', () => {
+ assert.equal(builder.builderStartingPrice([{ products: [{ price: 500, stock: 0 }] }]), null);
+ assert.equal(builder.builderStartingPrice([{ products: [{ price: 500, stock: 1 }] }, { products: [] }]), null);
+ assert.equal(builder.builderStartingPrice([]), null);
+});
