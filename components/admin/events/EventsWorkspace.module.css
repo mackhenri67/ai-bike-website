@@ -1,0 +1,5 @@
+.title{font-size:28px;font-weight:700;margin:0 0 24px}.tabs{display:flex;gap:10px;margin-bottom:26px}.tabs button{padding:11px 24px;border:1px solid #ddd;border-radius:8px;background:white;color:#333;font:inherit;font-weight:600;cursor:pointer}.tabs button[aria-selected=true]{background:#e8bf24;border-color:#e8bf24;color:#151515}.tabs button:focus-visible{outline:2px solid #333;outline-offset:3px}
+
+/* Unified LNR admin design */
+
+.title{margin:0}.description{margin:8px 0 24px;color:#7a827c;font-size:13px}.tabs{display:inline-flex;gap:4px;padding:4px;background:#e9ede8;border:1px solid #e1e6df;border-radius:10px;margin-bottom:24px}.tabs button{min-width:110px;padding:9px 20px;font-size:12px;border:0;background:transparent;color:#737d72;border-radius:7px}.tabs button[aria-selected=true]{background:#fff;color:#273025;box-shadow:0 1px 4px #24322212}

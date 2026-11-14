@@ -19,7 +19,6 @@ import {
   LogoutIcon,
   MenuIcon,
   SettingsIcon,
-  TicketIcon,
   UsersIcon,
 } from "./icons";
 import styles from "./AdminSidebar.module.css";
@@ -28,7 +27,6 @@ const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard", icon: GridIcon },
   { href: "/admin/orders", label: "Orders", icon: CartIcon },
   { href: "/admin/events", label: "Events", icon: CalendarIcon },
-  { href: "/admin/registrations", label: "Sign-ups", icon: TicketIcon },
   { href: "/admin/products", label: "Products", icon: CubeIcon },
   { href: "/admin/customers", label: "Customers", icon: UsersIcon },
   { href: "/admin/messages", label: "Messages", icon: ChatIcon },
@@ -80,7 +78,7 @@ export default function AdminSidebar() {
               height={44}
               className={styles.brandImage}
             />
-            <span className={styles.brandText}>LnR Cycle Center</span>
+            <span className={styles.brandText}>LNR Cycle Center<small>Store management</small></span>
           </Link>
           <button
             type="button"
@@ -94,6 +92,7 @@ export default function AdminSidebar() {
 
         {/* Primary navigation */}
         <nav className={styles.nav} aria-label="Admin navigation">
+          <p className={styles.navLabel}>Workspace</p>
           {NAV_ITEMS.map((item) => (
             <AdminNavItem
               key={item.href}

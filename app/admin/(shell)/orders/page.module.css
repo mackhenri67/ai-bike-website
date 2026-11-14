@@ -9,3 +9,6 @@
   line-height: 32px; /* same line box as the Dashboard title for alignment */
   color: #172033;
 }
+
+/* Unified LNR admin design */
+.page{width:100%;max-width:none}.title{margin:0}.pageDescription{margin:8px 0 28px;color:#7a827c;font-size:13px;line-height:1.65}

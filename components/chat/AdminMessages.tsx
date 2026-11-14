@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChatConversation, ChatInbox } from "@/lib/chat/types";
 import ChatThread from "./ChatThread";
 import ChatIcon from "./ChatIcon";
+import { Trash2Icon as TrashIcon } from "@/components/admin/icons";
 import { chatFetch, useChatThread } from "./useChatThread";
 import styles from "./AdminMessages.module.css";
 
@@ -11,10 +12,10 @@ function merge(old: ChatConversation[], next: ChatConversation[]) {
   next.forEach(item => map.set(item.id, item));
   return [...map.values()].sort((a, b) => Date.parse(b.last_message_at) - Date.parse(a.last_message_at) || b.id.localeCompare(a.id));
 }
-function Conversation({ conversation, back }: { conversation: ChatConversation; back: () => void }) {
+function Conversation({ conversation, back, remove }: { conversation: ChatConversation; back: () => void; remove: () => void }) {
   const chat = useChatThread(`/api/admin/messages/${conversation.id}`, 5000, "admin");
   return <div className={styles.conversation}>
-    <header className={styles.threadHeader}><button type="button" className={styles.back} onClick={back}>← Inbox</button><div><h2>{conversation.customer_name}</h2><p>{conversation.customer_email || "Customer conversation"}</p></div></header>
+    <header className={styles.threadHeader}><button type="button" className={styles.back} onClick={back}>← Inbox</button><div className={styles.threadIdentity}><h2>{conversation.customer_name}</h2><p>{conversation.customer_email || "Customer conversation"}</p></div><button type="button" className={styles.deleteIconButton} onClick={remove} aria-label="Delete conversation" title="Delete conversation"><TrashIcon size={19}/></button></header>
     <ChatThread chat={chat} role="admin" name={conversation.customer_name}/>
   </div>;
 }
@@ -28,6 +29,28 @@ export default function AdminMessages() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [retry, setRetry] = useState(0);
   const olderLoaded = useRef(false);
+  const removed = useRef(new Set<string>());
+  const [deleting,setDeleting] = useState<ChatConversation|null>(null);
+  const [deletingBusy,setDeletingBusy] = useState(false);
+  const [deleteError,setDeleteError] = useState<string|null>(null);
+  const [notice,setNotice] = useState<string|null>(null);
+  const confirmDialog = useRef<HTMLDialogElement>(null);
+  useEffect(()=>{if(deleting)confirmDialog.current?.showModal();},[deleting]);
+  const removeConversation=async()=>{
+    if(!deleting || deletingBusy)return;
+    setDeletingBusy(true);setDeleteError(null);
+    try {
+      const response=await fetch(`/api/admin/messages/${deleting.id}`,{method:"DELETE",credentials:"same-origin"});
+      const result=await response.json();
+      if(!response.ok)throw new Error(result.error || "Could not delete conversation.");
+      removed.current.add(deleting.id);
+      setInbox(previous=>({...previous,conversations:previous.conversations.filter(item=>item.id!==deleting.id)}));
+      setSelected(null);setDeleting(null);
+      setNotice(result.cleanupPending ? "Conversation deleted. Attachment storage cleanup is pending and will retry on a later deletion." : "Conversation deleted.");
+      window.dispatchEvent(new CustomEvent("lnr:messages-updated"));
+    } catch(e){setDeleteError(e instanceof Error ? e.message : "Could not delete conversation.");}
+    finally{setDeletingBusy(false);}
+  };
 
   useEffect(() => {
     let active = true, busy = false;
@@ -39,7 +62,7 @@ export default function AdminMessages() {
       try {
         const data = await chatFetch<ChatInbox>(`/api/admin/messages?${new URLSearchParams({ q: query })}`, undefined, controller.signal);
         if (!active) return;
-        setInbox(previous => ({ ...data, query, conversations: previous.query === query ? merge(previous.conversations, data.conversations) : data.conversations, has_more: olderLoaded.current && previous.query === query ? previous.has_more : data.has_more }));
+        setInbox(previous => ({ ...data, query, conversations: previous.query === query && olderLoaded.current ? merge(previous.conversations, data.conversations).filter(item=>!removed.current.has(item.id)) : data.conversations.filter(item=>!removed.current.has(item.id)), has_more: olderLoaded.current && previous.query === query ? previous.has_more : data.has_more }));
         setLoaded(true); setError(null);
       } catch (e) { if (active && !controller.signal.aborted) setError(e instanceof Error ? e.message : "Could not load conversations."); }
       finally { busy = false; }
@@ -65,13 +88,13 @@ export default function AdminMessages() {
       const next = new URLSearchParams({ q: query, before_id: last.id, before_time: last.last_message_at });
       const data = await chatFetch<ChatInbox>(`/api/admin/messages?${next}`);
       olderLoaded.current = true;
-      setInbox(previous => previous.query === query ? { ...data, query, conversations: merge(previous.conversations, data.conversations) } : previous);
+      setInbox(previous => previous.query === query ? { ...data, query, conversations: merge(previous.conversations, data.conversations).filter(item=>!removed.current.has(item.id)) } : previous);
       setError(null);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not load conversations."); }
     finally { setLoadingMore(false); }
   };
   return <section className={styles.page}>
-    <h1 className={styles.title}>Messages</h1><p className={styles.subtitle}>Read customer questions and reply as LNR Cycle Center.</p>
+    <h1 className={styles.title}>Messages</h1>{notice?<p role="status">{notice}</p>:null}<p className={styles.subtitle}>Read customer questions and reply as LNR Cycle Center.</p>
     {error ? <p className={styles.error} role="status">{error} <button type="button" onClick={() => setRetry(value => value + 1)}>Retry</button></p> : null}
     <div className={`${styles.inbox} ${selected ? styles.selected : ""}`}>
       <aside className={styles.listPane} aria-label="Customer conversations">
@@ -88,7 +111,13 @@ export default function AdminMessages() {
           {inbox.has_more ? <button type="button" className={styles.loadMore} onClick={() => void more()} disabled={loadingMore}>{loadingMore ? "Loading…" : "Load more conversations"}</button> : null}
         </div>
       </aside>
-      <div className={styles.threadPane}>{selected ? <Conversation key={selected.id} conversation={selected} back={() => setSelected(null)}/> : <div className={styles.welcome}><ChatIcon size={42}/><h2>Your customer inbox</h2><p>Select a conversation to read messages and send a reply.</p></div>}</div>
+      <div className={styles.threadPane}>{selected ? <Conversation key={selected.id} conversation={selected} back={() => setSelected(null)} remove={()=>{setDeleteError(null);setDeleting(selected);}}/> : <div className={styles.welcome}><ChatIcon size={42}/><h2>Your customer inbox</h2><p>Select a conversation to read messages and send a reply.</p></div>}</div>
     </div>
+  {deleting ? <dialog ref={confirmDialog} className={styles.confirmDialog} aria-labelledby="delete-conversation-title" onCancel={event=>{if(deletingBusy)event.preventDefault();else setDeleting(null);}}>
+    <h2 id="delete-conversation-title">Delete conversation?</h2>
+    <p>This permanently removes the conversation with {deleting.customer_name}, including messages and image attachments, for both you and the customer. The customer can start a new conversation afterward.</p>
+    {deleteError?<p role="alert" className={styles.error}>{deleteError}</p>:null}
+    <div className={styles.confirmActions}><button type="button" autoFocus disabled={deletingBusy} onClick={()=>setDeleting(null)}>Keep conversation</button><button type="button" disabled={deletingBusy} className={styles.deleteButton} onClick={()=>void removeConversation()}>{deletingBusy?"Deleting…":"Delete conversation"}</button></div>
+   </dialog>:null}
   </section>;
 }

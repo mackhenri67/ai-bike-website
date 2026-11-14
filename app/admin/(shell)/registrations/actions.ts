@@ -30,6 +30,7 @@ export async function reviewRegistrationAction(
   if (result.error) return { error: result.error };
 
   revalidatePath("/admin/registrations");
+  revalidatePath("/admin/events");
   revalidatePath("/admin/dashboard");
   revalidatePath("/my-events");
 
@@ -56,6 +57,7 @@ export async function updateRegistrationStatusAction(
   if (result.error) return { error: result.error };
 
   revalidatePath("/admin/registrations");
+  revalidatePath("/admin/events");
   revalidatePath("/my-events");
 
   return { error: null };

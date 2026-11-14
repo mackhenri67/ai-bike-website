@@ -4,6 +4,7 @@ import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 import { NewOrdersProvider } from "./NewOrdersContext";
 import styles from "./AdminLayout.module.css";
+import theme from "./AdminTheme.module.css";
 
 type AdminLayoutProps = {
   user: User | null;
@@ -25,7 +26,7 @@ type AdminLayoutProps = {
  */
 export default function AdminLayout({ user, children }: AdminLayoutProps) {
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ${theme.theme}`}>
       <NewOrdersProvider>
         <AdminSidebar />
 

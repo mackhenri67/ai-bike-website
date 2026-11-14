@@ -45,7 +45,7 @@ export default async function AdminLoginPage() {
         </section>
       </div>
 
-      <footer className={styles.footer}>© LnR Cycle Center 2025</footer>
+      <footer className={styles.footer}>© LNR Cycle Center 2026</footer>
     </main>
   );
 }

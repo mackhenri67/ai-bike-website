@@ -20,6 +20,7 @@ export default async function AdminCustomersPage() {
   return (
     <section className={styles.page}>
       <h1 className={styles.title}>Customers</h1>
+      <p className={styles.pageDescription}>View customer accounts and their contact information.</p>
 
       <CustomersManager
         initialCustomers={result.data ?? []}
@@ -28,4 +29,3 @@ export default async function AdminCustomersPage() {
     </section>
   );
 }
-

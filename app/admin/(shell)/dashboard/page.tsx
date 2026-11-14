@@ -67,6 +67,7 @@ export default async function AdminDashboardPage() {
   return (
     <section className={styles.page}>
       <h1 className={styles.title}>Dashboard</h1>
+      <p className={styles.pageDescription}>A clear view of orders, inventory, and upcoming activity.</p>
 
       <div className={styles.stats}>
         {statsCards.length > 0 ? (

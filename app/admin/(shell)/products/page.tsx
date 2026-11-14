@@ -28,6 +28,7 @@ export default async function AdminProductsPage() {
   return (
     <section className={styles.page}>
       <h1 className={styles.title}>Products</h1>
+      <p className={styles.pageDescription}>Manage your catalogue, purchase options, and available stock.</p>
 
       <CustomizationSettings products={productsResult.data ?? []} categories={categoriesResult.data ?? []} references={references}/>
       <ProductsManager

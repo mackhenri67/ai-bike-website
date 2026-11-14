@@ -416,3 +416,24 @@
     grid-template-columns: 1fr;
   }
 }
+/* Unified LNR admin design */
+.card{border-color:#e5e8e3;border-radius:12px;box-shadow:0 2px 6px #24332203;background:#fff;}
+.card{margin-top:24px;}
+.header,.modalHeader{gap:16px;}
+.tableScroll{overflow-x:auto;}
+.table{min-width:680px;}
+.addButton,.saveButton{background:#edcd58;color:#242b22;border:1px solid #e3c248;border-radius:8px;font-size:12px;font-weight:600;min-height:38px;box-shadow:0 1px 2px #866f1610;}
+.addButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
+.saveButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
+.cancelButton{border-radius:8px;font-size:12px;}
+.iconButton{border-radius:8px;min-width:32px;min-height:32px;}
+.editButton{background:#f5f6f0;color:#68724f;border-color:#e1e5d7;}
+.overlay{padding:24px 16px;align-items:center;background:#19201980;backdrop-filter:blur(3px);}
+.modal{border:1px solid #e4e8e0;border-radius:16px;box-shadow:0 24px 90px #15230f30;max-height:calc(100dvh - 48px);overflow-y:auto;}
+.modalTitle{font-size:20px;font-weight:600;letter-spacing:-.5px;color:#273025;}
+.modalHeader,.modalActions{border-color:#e9ede7;}
+.input,.textarea{border-radius:8px;border-color:#dfe4dc;}
+.label{font-size:12px;font-weight:550;color:#5a6556;}
+.badge{font-size:10px;font-weight:600;padding:4px 9px;letter-spacing:.1px;border-radius:6px;}
+.empty{padding:52px 24px;color:#8a9286;font-size:13px;}
+.page{max-width:none}

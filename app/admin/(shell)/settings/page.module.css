@@ -227,3 +227,16 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* Unified LNR admin design */
+.card{border-color:#e5e8e3;border-radius:12px;box-shadow:0 2px 6px #24332203;background:#fff;}
+.card{margin-top:24px;}
+.saveButton{background:#edcd58;color:#242b22;border:1px solid #e3c248;border-radius:8px;font-size:12px;font-weight:600;min-height:38px;box-shadow:0 1px 2px #866f1610;}
+.saveButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
+.secondaryButton{border-radius:8px;font-size:12px;}
+.input{border-radius:8px;border-color:#dfe4dc;}
+.label{font-size:12px;font-weight:550;color:#5a6556;}
+
+/* Unified LNR admin design */
+
+.page{max-width:850px}.title{margin:0}.subtitle{margin:8px 0 28px;font-size:13px;color:#7a827c}.card{margin-top:0;padding:30px;border-radius:14px}.field{margin-bottom:26px}.uploadArea{background:#fafbf7;border-color:#dce5d3;border-radius:10px}

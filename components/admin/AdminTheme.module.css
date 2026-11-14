@@ -1,0 +1,23 @@
+
+.theme{--admin-canvas:#f5f6f8;--admin-surface:#fff;--admin-ink:#202622;--admin-muted:#747b75;--admin-line:#e5e8e5;--admin-brand:#edcd58;--admin-brand-hover:#dfbb3d;--bg-page:var(--admin-canvas);--ink:var(--admin-ink);--font-sans:var(--font-inter),Arial,sans-serif;--accent:var(--admin-brand);--accent-hover:var(--admin-brand-hover);--border:var(--admin-line);font-family:var(--font-sans);color:var(--admin-ink);font-size:14px;line-height:1.5}
+.theme h1{font-family:var(--font-sans);font-size:28px;font-weight:650;letter-spacing:-1px;line-height:1.25;color:var(--admin-ink)}
+.theme h2,.theme h3{font-family:var(--font-sans);letter-spacing:-.3px}
+.theme button,.theme input,.theme select,.theme textarea{font-family:var(--font-sans)}
+.theme button{transition:background .15s,border-color .15s,box-shadow .15s;touch-action:manipulation}
+.theme button:disabled{cursor:not-allowed;opacity:.55}
+.theme :is(button,a,input,select,textarea,summary):focus-visible{outline:2px solid #9b7b18;outline-offset:3px}
+.theme input:not([type=checkbox]):not([type=radio]):not([type=file]),.theme select,.theme textarea{border-color:#dce1dc;border-radius:8px;background-color:#fff;color:var(--admin-ink);font-size:13px}
+.theme input:not([type=checkbox]):not([type=radio]):not([type=file]),.theme select{min-height:40px}
+.theme input::placeholder,.theme textarea::placeholder{color:#969d97}
+.theme textarea{line-height:1.65}
+.theme :is(input,textarea,select):focus{border-color:#b69a37;box-shadow:0 0 0 3px #edcd5826}
+.theme input[type=checkbox],.theme input[type=radio]{accent-color:#b39830}
+.theme table{border-collapse:collapse;width:100%}
+.theme thead{background:#f8f9f7}
+.theme th{font-size:11px;line-height:1.5;letter-spacing:.5px;text-transform:uppercase;color:#7b827d;font-weight:650;padding:14px 20px;border-bottom:1px solid var(--admin-line);white-space:nowrap}
+.theme td{font-size:13px;line-height:1.55;padding:18px 20px;border-bottom:1px solid #edf0ed;vertical-align:middle}
+.theme tbody tr:last-child td{border-bottom:0}
+.theme tbody tr:hover{background:#fcfcfa}
+.theme dialog{color:var(--admin-ink);font-family:var(--font-sans)}
+@media(max-width:600px){.theme h1{font-size:25px}.theme th,.theme td{padding:13px 15px}}
+@media(prefers-reduced-motion:reduce){.theme *{animation:none!important;transition:none!important}}

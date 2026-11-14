@@ -119,8 +119,8 @@ export default function CustomersManager({
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <colgroup>
-            {COLUMN_WIDTHS.map((width) => (
-              <col key={width} style={{ width: `${width}%` }} />
+            {COLUMN_WIDTHS.map((width, index) => (
+              <col key={`customer-column-${index}`} style={{ width: `${width}%` }} />
             ))}
           </colgroup>
           <thead>

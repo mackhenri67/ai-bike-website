@@ -171,3 +171,9 @@
   line-height: 16px;
   color: #d92d20;
 }
+
+/* Unified LNR admin design */
+.addButton{background:#edcd58;color:#242b22;border:1px solid #e3c248;border-radius:8px;font-size:12px;font-weight:600;min-height:38px;box-shadow:0 1px 2px #866f1610;}
+.addButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
+.input{border-radius:8px;border-color:#dfe4dc;}
+.label{font-size:12px;font-weight:550;color:#5a6556;}

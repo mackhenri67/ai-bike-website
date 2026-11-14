@@ -1,46 +1,7 @@
-.shell {
-  min-height: 100vh;
-}
 
-/* Main content begins exactly after the 255px sidebar. */
-.main {
-  position: relative;
-  margin-left: 255px;
-  min-height: 100vh;
-  background: var(--bg-page);
-}
-
-/* Top-right administrator block, aligned with the page title band. */
-.headerSlot {
-  position: absolute;
-  top: 28px; /* matches .content padding-top so the Administrator
-                text lines up with the page title */
-  right: 25px;
-  z-index: 5;
-}
-
-/* Content starts ~x:280 / ~y:37 on the 1549x886 reference. Vertical padding
-   is kept compact so the whole dashboard fits a 100vh viewport. */
-.content {
-  padding: 28px 25px 20px;
-}
-
-@media (max-width: 768px) {
-  .main {
-    margin-left: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .headerSlot {
-    position: static;
-    display: flex;
-    justify-content: flex-end;
-    padding: 20px 20px 0;
-  }
-
-  .content {
-    flex: 1;
-    padding: 24px 20px 32px;
-  }
-}
+.shell{min-height:100dvh;background:var(--admin-canvas)}
+.main{position:relative;margin-left:240px;min-height:100dvh}
+.headerSlot{position:sticky;top:0;z-index:30;background:#ffffffed;backdrop-filter:blur(16px);border-bottom:1px solid var(--admin-line);padding:0 36px;min-height:76px;display:flex;align-items:center}
+.content{padding:32px 36px 48px;max-width:1600px;margin:0 auto;min-width:0}
+@media(max-width:1100px){.headerSlot{padding:0 24px}.content{padding:28px 24px 40px}}
+@media(max-width:768px){.main{margin-left:0}.headerSlot{padding:0 18px 0 72px;min-height:72px}.content{padding:26px 18px 36px}}

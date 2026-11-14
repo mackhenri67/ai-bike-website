@@ -1,4 +1,5 @@
 "use client";
+import RecordPreviewButton from "@/components/admin/RecordPreviewButton";
 
 import { useMemo, useState } from "react";
 import {
@@ -206,6 +207,7 @@ export default function RegistrationsManager({
                   <td>{reg.status}</td>
                   <td>
                     <div className={styles.actionsCell}>
+<RecordPreviewButton kind="signup" record={reg}/>
                       <button
                         type="button"
                         className={styles.viewButton}

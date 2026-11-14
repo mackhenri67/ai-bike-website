@@ -198,3 +198,9 @@
 .dropdown::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
+
+/* Unified LNR admin design */
+.wrapper{border-color:#e5e8e3;border-radius:12px;box-shadow:0 2px 6px #24332203;background:#fff;}
+.wrapper{margin-top:24px;}
+.label{font-size:12px;font-weight:550;color:#5a6556;}
+.empty{padding:52px 24px;color:#8a9286;font-size:13px;}

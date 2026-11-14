@@ -20,6 +20,7 @@ export default async function AdminOrdersPage() {
   return (
     <section className={styles.page}>
       <h1 className={styles.title}>Orders</h1>
+      <p className={styles.pageDescription}>Review purchases, verify payments, and manage fulfillment.</p>
 
       <OrdersManager
         initialOrders={result.data ?? []}

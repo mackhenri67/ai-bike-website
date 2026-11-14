@@ -204,3 +204,15 @@ test("Retry finishes an upload when Supabase reports an existing object with HTT
  assert.equal((await app.customer.POST(imageRequest())).status,200);
  assert.equal(app.state.calls.at(-1).name,"lnr_chat_finish_image");
 });
+
+test("Conversation deletion rejects missing admin, customer role and cross-origin calls before RPC",async()=>{
+ const app=setup();
+ const context={params:Promise.resolve({id:conversation})};
+ const request=(origin="https://shop.test")=>new Request("https://shop.test/api/admin/messages/"+conversation,{method:"DELETE",headers:{Origin:origin}});
+ assert.equal((await app.thread.DELETE(request(),context)).status,401);
+ app.state.admin=customer;
+ assert.equal((await app.thread.DELETE(request(),context)).status,403);
+ app.state.admin=admin;
+ assert.equal((await app.thread.DELETE(request("https://unrelated.test"),context)).status,403);
+ assert.equal(app.state.calls.length,0);
+});

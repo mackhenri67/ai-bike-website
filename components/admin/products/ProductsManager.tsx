@@ -1,4 +1,5 @@
 "use client";
+import RecordPreviewButton from "@/components/admin/RecordPreviewButton";
 import type { RetailerReference } from "./retailer-options";
 
 import { useRef, useState } from "react";
@@ -378,6 +379,7 @@ export default function ProductsManager({
                     </td>
                     <td className={styles.td}>
                       <div className={styles.actionsCell}>
+<RecordPreviewButton kind="product" record={product}/>
                         <button
                           type="button"
                           className={`${styles.actionButton} ${styles.editButton}`}

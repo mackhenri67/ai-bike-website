@@ -176,3 +176,11 @@
     cursor: pointer;
   }
 }
+
+/* Unified LNR admin design */
+
+.sidebar{width:240px;background:#191d1a;color:#b9c0b9;border-right:1px solid #262d27;overflow-y:auto}
+.brandRow{height:100px;padding:24px}.brand{gap:12px}.brandImage{width:30px;height:42px}.brandText{font-size:14px;font-weight:600;line-height:20px;letter-spacing:-.2px}.brandText small{display:block;color:#858f86;font-size:10px;font-weight:400;letter-spacing:.2px;margin-top:3px}
+.nav{padding:10px 14px;gap:6px}.navLabel{font-size:9px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:#758175;padding:0 14px;margin:0 0 12px}
+.secondaryNav{padding:12px 14px}.divider{background:#2d342e}.dividerInset{margin:18px 24px 0}.logoutForm{padding:16px 14px}.logoutButton{height:42px;padding:0 14px;font-size:12px;border-radius:8px;color:#a0aaa0;gap:12px}.logoutButton:hover{background:#252c25}.closeButton{margin-left:auto}
+@media(max-width:768px){.brandRow{padding:20px;height:90px}.menuButton{top:18px;left:18px;width:36px;height:36px;border-radius:9px;box-shadow:none;background:#fff}}

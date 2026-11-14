@@ -486,3 +486,21 @@
 .combinationRow p { overflow-wrap: anywhere; }
 .combinationFields input { min-width: 0; width: 100%; }
 @media (max-width: 640px) { .combinationGrid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Unified LNR admin design */
+.header{gap:16px;}
+.addButton,.primaryButton{background:#edcd58;color:#242b22;border:1px solid #e3c248;border-radius:8px;font-size:12px;font-weight:600;min-height:38px;box-shadow:0 1px 2px #866f1610;}
+.addButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
+.primaryButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
+.secondaryButton{border-radius:8px;font-size:12px;}
+.overlay{padding:24px 16px;align-items:center;background:#19201980;backdrop-filter:blur(3px);}
+.modal{border:1px solid #e4e8e0;border-radius:16px;box-shadow:0 24px 90px #15230f30;max-height:calc(100dvh - 48px);overflow-y:auto;}
+.input,.textarea{border-radius:8px;border-color:#dfe4dc;}
+.label{font-size:12px;font-weight:550;color:#5a6556;}
+.sectionTitle{font-size:13px;letter-spacing:.1px;color:#3e4b37;font-weight:650;}
+.modal{width:860px;}
+.header,.footer{padding:22px 28px;background:#fff;border-color:#e7ebe4;}
+.body{padding:24px 28px;}
+.sectionTitle{padding-bottom:12px;border-bottom:1px solid #edf0e9;}
+.combinationRow{background:#f8faf5;border:1px solid #e1e8da;border-radius:10px;padding:14px;}
+.title{font-size:21px;font-weight:600;}

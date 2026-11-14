@@ -1,4 +1,5 @@
 "use client";
+import RecordPreviewButton from "@/components/admin/RecordPreviewButton";
 
 import { useMemo, useState } from "react";
 import type { GcashPaymentRow, OrderRow, OrderStatus } from "@/lib/data/types";
@@ -11,6 +12,7 @@ import { MapPinIcon, SearchIcon, CloseIcon } from "./icons";
 import OrderLocationMap from "./OrderLocationMap";
 
 type DisplayOrder = {
+  source: OrderRow;
   /** Database row id — used for persistence, never shown to the admin. */
   dbId: string;
   /** Human-friendly order identifier shown in the table (order number). */
@@ -92,6 +94,7 @@ function toDisplayOrder(order: OrderRow): DisplayOrder {
   const quantity = items.reduce((sum, line) => sum + line.quantity, 0);
 
   return {
+    source: order,
     dbId: order.id,
     id: order.order_number,
     customer: order.customer_name,
@@ -332,6 +335,7 @@ export default function OrdersManager({
                   </td>
                   <td>
                     <div className={styles.actionsCell}>
+<RecordPreviewButton kind="order" record={{...order.source, status: order.status, payment_status: order.paymentStatus as OrderRow["payment_status"], gcash_payments: order.gcashPayment}}/>
                       <button
                         type="button"
                         className={styles.mapButton}

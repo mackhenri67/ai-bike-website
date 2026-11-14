@@ -1,4 +1,5 @@
 "use client";
+import RecordPreviewButton from "@/components/admin/RecordPreviewButton";
 
 import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
@@ -30,6 +31,7 @@ type EventForm = {
 type ModalState = { mode: "add" } | { mode: "edit"; event: EventRow } | null;
 
 type EventsManagerProps = {
+  embedded?: boolean;
   initialEvents: EventRow[];
   error?: string | null;
 };
@@ -80,6 +82,7 @@ function formatEventDate(value: string): string {
 
 export default function EventsManager({
   initialEvents,
+  embedded = false,
   error: initialError,
 }: EventsManagerProps) {
   const [deletedEventIds, setDeletedEventIds] = useState<ReadonlySet<string>>(
@@ -223,7 +226,7 @@ export default function EventsManager({
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Events</h1>
+          {!embedded ? <h1 className={styles.title}>Events</h1> : null}
           <p className={styles.description}>
             Create rides, set slots, and manage sign ups.
           </p>
@@ -287,6 +290,7 @@ export default function EventsManager({
                   </td>
                   <td className={styles.td}>
                     <div className={styles.actions}>
+<RecordPreviewButton kind="event" record={event}/>
                       <button
                         type="button"
                         onClick={() => openEdit(event)}

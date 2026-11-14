@@ -41,6 +41,7 @@ export function useChatThread(endpoint: string, pollMs = 5000, role: "customer" 
   const alive = useRef(true);
   const busy = useRef(false);
   const loadedOlder = useRef(false);
+  const currentConversation = useRef<string | null>(null);
   const acked = useRef("0");
   const ackBusy = useRef(false);
   const abort = useRef<AbortController | null>(null);
@@ -53,7 +54,11 @@ export function useChatThread(endpoint: string, pollMs = 5000, role: "customer" 
     try {
       const data = await chatFetch<ChatThread>(endpoint, undefined, controller.signal);
       if (!alive.current || controller.signal.aborted) return;
-      setMessages(previous => mergeMessages(previous, data.messages));
+      if (currentConversation.current !== data.conversation_id) {
+        currentConversation.current = data.conversation_id;
+        loadedOlder.current = false; acked.current = "0";
+        setMessages(data.messages);
+      } else setMessages(previous => mergeMessages(previous, data.messages));
       setConversationId(data.conversation_id);
       setUnread(data.unread_count);
       if (!loadedOlder.current) setHasMore(data.has_more);
@@ -105,6 +110,7 @@ export function useChatThread(endpoint: string, pollMs = 5000, role: "customer" 
   const send = async (body: string, clientId: string, imageId: string | null = null) => {
     const result = await chatFetch<ChatSent>(endpoint, { operation: "send", body, client_id: clientId, image_id: imageId });
     if (!alive.current) return;
+    currentConversation.current = result.conversation_id;
     setConversationId(result.conversation_id);
     setMessages(previous => mergeMessages(previous, [result.message])); setLoaded(true); setError(null);
     window.dispatchEvent(new CustomEvent("lnr:messages-updated"));
