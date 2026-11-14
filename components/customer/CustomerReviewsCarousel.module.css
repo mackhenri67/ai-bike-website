@@ -1,27 +1,209 @@
-.section{padding:54px 0 34px;background:#fff}
-.container{max-width:1280px;margin:0 auto;padding:0 48px}
-.titleRow{position:relative;display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:26px;min-height:48px}
-.eyebrow{font-size:10px;letter-spacing:.16em;font-weight:700;color:#9b7a0d;margin-bottom:7px;text-align:center}
-.titleRow h2{font-family:var(--font-sans);font-size:36px;line-height:1.2;font-weight:700;letter-spacing:-.01em;color:#111827;text-align:center}
-.controls{position:absolute;right:0;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:9px;flex-shrink:0}
-.controls button{display:grid;place-items:center;width:38px;height:38px;border:1px solid #e1e5de;background:#fff;border-radius:50%;font-size:25px;line-height:1;color:#222b22;cursor:pointer;transition:background .15s,border-color .15s}
-.controls button:hover{background:#f7f8f5;border-color:#cbd3c6}
-.controls button:focus-visible,.track:focus-visible{outline:2px solid #a98205;outline-offset:3px}
-.track{display:flex;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:0 2px 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.track::-webkit-scrollbar{display:none}
-.card{flex:0 0 clamp(245px,27%,320px);min-width:0;display:flex;flex-direction:column;scroll-snap-align:start;overflow:hidden;border:1px solid #e8ebe5;border-radius:13px;background:#fbfcfa;box-shadow:0 7px 24px #1725150a}
-.imageWrap{width:100%;aspect-ratio:1.12;overflow:hidden;background:#eef1eb}
-.image{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
-.card:hover .image{transform:scale(1.035)}
-.imageFallback{display:grid;place-items:center;width:100%;height:100%;color:#7c8677;font-size:12px;font-weight:700;letter-spacing:.12em}
-.body{display:flex;flex:1;flex-direction:column;gap:12px;padding:17px 18px 19px}
-.stars{display:flex;gap:2px;font-size:19px;line-height:1}
-.filled{color:#e5b51b}
-.emptyStar{color:#d9ded5}
-.quote{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;min-height:5.8em;font-size:14px;line-height:1.55;color:#303b30}
-.authorRow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto;padding-top:7px}
-.author{font-size:13px;font-weight:700;color:#202820}
-.verified{font-size:10px;line-height:1.35;color:#788276;text-align:right}
-.empty{display:flex;align-items:center;justify-content:center;min-height:150px;padding:24px;border:1px dashed #d9dfd5;border-radius:14px;background:#fafbf8;color:#758073;text-align:center;font-size:14px;line-height:1.7}
-@media(max-width:900px){.container{padding:0 28px}.titleRow h2{font-size:28px}.card{flex-basis:clamp(245px,43%,320px)}}
-@media(max-width:640px){.section{padding:42px 0 28px}.container{padding:0 20px}.titleRow{display:block;min-height:0;padding-bottom:48px}.titleRow h2{font-size:26px}.controls{top:auto;bottom:0;right:0;transform:none}.card{flex-basis:82%}.imageWrap{aspect-ratio:1.22}.body{padding:15px}.quote{min-height:0}}
+.section {
+  padding: 54px 0 42px;
+  background: #fff;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 48px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+.titleRow h2 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 36px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #111827;
+  text-align: left;
+}
+
+.controls {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.counter {
+  margin-right: 5px;
+  color: #788076;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.controls button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #e1e5de;
+  border-radius: 50%;
+  background: #fff;
+  color: #222b22;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.controls button:hover {
+  border-color: #cbd3c6;
+  background: #f7f8f5;
+}
+
+.controls button:focus-visible {
+  outline: 2px solid #a98205;
+  outline-offset: 3px;
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  align-items: center;
+  gap: 34px;
+  padding: 22px;
+  border: 1px solid #e8ebe5;
+  border-radius: 16px;
+  background: #fbfcfa;
+  box-shadow: 0 8px 32px #1725150a;
+  animation: review-enter .28s ease both;
+}
+
+@keyframes review-enter {
+  from { opacity: .65; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.imageWrap {
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1.35;
+  overflow: hidden;
+  border-radius: 11px;
+  background: #eef1eb;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.imageFallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: #7c8677;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+.body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px;
+}
+
+.stars {
+  display: flex;
+  gap: 3px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.filled {
+  color: #e5b51b;
+}
+
+.emptyStar {
+  color: #d9ded5;
+}
+
+.quote {
+  margin: 0;
+  color: #303b30;
+  font-size: clamp(16px, 1.7vw, 22px);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.authorRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.author {
+  margin: 0;
+  color: #202820;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.verified {
+  color: #788276;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.empty {
+  display: flex;
+  min-height: 160px;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 1px dashed #d9dfd5;
+  border-radius: 14px;
+  background: #fafbf8;
+  color: #758073;
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .container { padding: 0 28px; }
+  .titleRow h2 { font-size: 28px; }
+  .card { gap: 22px; }
+  .body { padding: 12px; }
+}
+
+@media (max-width: 640px) {
+  .section { padding: 42px 0 30px; }
+  .container { padding: 0 20px; }
+  .titleRow {
+    align-items: flex-start;
+    margin-bottom: 34px;
+  }
+  .titleRow h2 { font-size: 26px; }
+  .controls { gap: 6px; }
+  .controls button { width: 34px; height: 34px; }
+  .counter { font-size: 11px; }
+  .card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+  .imageWrap { aspect-ratio: 1.35; }
+  .body { gap: 12px; padding: 12px 5px 8px; }
+  .quote { font-size: 16px; }
+}
