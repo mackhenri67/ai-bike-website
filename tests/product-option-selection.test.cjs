@@ -47,8 +47,8 @@ test('Starting price recalculates when catalogue products are added or removed',
  assert.equal(builder.builderStartingPrice(steps), 2200);
  firstCategory.push({ price: 600, stock: 1 });
  assert.equal(builder.builderStartingPrice(steps), 2100);
- firstCategory.splice(1, 1);
- assert.equal(builder.builderStartingPrice(steps), 2100);
+ firstCategory.splice(firstCategory.findIndex((product) => product.price === 600), 1);
+ assert.equal(builder.builderStartingPrice(steps), 2200);
 });
 
 test('Starting price is unavailable when a required category has no in-stock products', () => {
