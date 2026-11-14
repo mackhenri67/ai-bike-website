@@ -109,6 +109,15 @@ export type OrderItemRow = {
 
 export type OrderRow = {
   payment_receipt?: { url: string | null; sender: string | null; reference: string | null; status: string } | null;
+  custom_build_id?: string | null;
+  build_review?: {
+    id: string;
+    status: "pending" | "approved" | "rejected";
+    rating: number;
+    review_text: string;
+    image_url: string | null;
+    admin_note: string | null;
+  } | null;
   id: string;
   order_number: string;
   customer_id: string | null;
