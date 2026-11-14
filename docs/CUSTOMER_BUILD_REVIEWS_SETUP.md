@@ -13,12 +13,13 @@
 ## Install
 
 1. Merge this branch into the production branch after reviewing the Vercel preview/build.
-2. In Supabase, open **SQL Editor** and run the complete file: supabase/migrations/0023_customer_build_reviews.sql
-3. Redeploy the Vercel project after the migration is successful.
-4. Test with a customer account that places a new custom build through the manual or AI bike builder.
-5. In Admin → Orders, mark the test order **Completed**. The customer should now see the review form under that order in **Account Overview → My Orders**.
-6. Submit a test photo, rating, and review. Confirm it appears on the homepage carousel immediately and is visible under **Admin → Customers → Build Reviews**.
-7. Use the admin Remove review action and confirm it disappears from the homepage.
+2. In Supabase, ensure migration 0023_customer_build_reviews.sql has been applied. If it has not, run that migration first.
+3. Run supabase/migrations/0024_publish_customer_reviews_immediately.sql in Supabase SQL Editor. This follow-up migration is required whether 0023 was applied before or after this PR; it publishes existing pending reviews and changes the default to published.
+4. Redeploy the Vercel project after the database migrations are successful.
+5. Test with a customer account that places a new custom build through the manual or AI bike builder.
+6. In Admin → Orders, mark the test order **Completed**. The customer should now see the review form under that order in **Account Overview → My Orders**.
+7. Submit a test photo, rating, and review. Confirm it appears on the homepage carousel immediately and is visible under **Admin → Customers → Build Reviews**.
+8. Use the admin Remove review action and confirm it disappears from the homepage.
 
 ## Important eligibility note
 
