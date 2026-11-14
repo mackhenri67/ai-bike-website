@@ -45,7 +45,9 @@ export default function CustomerBuildReviewsManager({ initialReviews }: { initia
                 <strong>{review.customer_name}</strong>
                 <p>{review.customer_email ?? "No email"} · {review.order_number}</p>
               </div>
-              <span className={styles.published}>Published</span>
+              <span className={review.status === "approved" ? styles.published : styles.legacy}>
+                {review.status === "approved" ? "Published" : "Legacy review"}
+              </span>
             </div>
             <div className={styles.stars} aria-label={`${review.rating} out of 5 stars`}>
               {Array.from({ length: 5 }, (_, index) => (
