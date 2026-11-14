@@ -12,31 +12,35 @@ export default function CustomerFooter() {
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
-        <nav className={styles.column} aria-label="Footer navigation">
-          <Link href="/" className={styles.link}>
-            Home
-          </Link>
-          <Link href="/products" className={styles.link}>
-            Products
-          </Link>
-          <Link href="/about" className={styles.link}>
-            About Us
-          </Link>
-          <Link href="/events" className={styles.link}>
-            Events
-          </Link>
-          <Link href="/custom-bike-builder" className={styles.link}>
-            Build a Bike
-          </Link>
+        <nav className={`${styles.column} ${styles.navigation}`} aria-label="Footer navigation">
+          <div className={styles.primaryLinks}>
+            <Link href="/" className={styles.link}>
+              Home
+            </Link>
+            <Link href="/products" className={styles.link}>
+              Products
+            </Link>
+            <Link href="/about" className={styles.link}>
+              About Us
+            </Link>
+            <Link href="/events" className={styles.link}>
+              Events
+            </Link>
+            <Link href="/custom-bike-builder" className={styles.link}>
+              Build a Bike
+            </Link>
+          </div>
 
           <span className={styles.separator} />
 
-          <Link href="/privacy-policy" className={styles.link}>
-            Privacy Policy
-          </Link>
-          <Link href="/terms" className={styles.link}>
-            Terms and Conditions
-          </Link>
+          <div className={styles.legalLinks}>
+            <Link href="/privacy-policy" className={styles.link}>
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className={styles.link}>
+              Terms and Conditions
+            </Link>
+          </div>
         </nav>
 
         <div className={styles.brand}>
