@@ -22,6 +22,12 @@ export default function CustomerFooter() {
           <Link href="/about" className={styles.link}>
             About Us
           </Link>
+          <Link href="/events" className={styles.link}>
+            Events
+          </Link>
+          <Link href="/custom-bike-builder" className={styles.link}>
+            Build a Bike
+          </Link>
 
           <span className={styles.separator} />
 
