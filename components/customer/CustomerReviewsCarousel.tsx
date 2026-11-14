@@ -15,7 +15,6 @@ type Review = {
 
 export default function CustomerReviewsCarousel({ reviews }: { reviews: Review[] }) {
   const [index, setIndex] = useState(0);
-  if (!reviews.length) return null;
   const review = reviews[index];
   const move = (delta: number) => setIndex((current) => (current + delta + reviews.length) % reviews.length);
 
@@ -33,15 +32,23 @@ export default function CustomerReviewsCarousel({ reviews }: { reviews: Review[]
             <button type="button" onClick={() => move(1)} aria-label="Next review">›</button>
           </div> : null}
         </div>
-        <article className={styles.card} style={{ "--review-progress": `${(index + 1) / reviews.length * 100}%` } as CSSProperties}>
-          {review.image_url ? <img src={review.image_url} alt={`Custom bicycle build reviewed by ${review.display_name}`} className={styles.image}/> : <div className={styles.imageFallback}>CUSTOM BUILD</div>}
-          <div className={styles.body}>
-            <div className={styles.stars} aria-label={`${review.rating} out of 5 stars`}>{Array.from({length: 5}, (_, i) => <span key={i} aria-hidden="true" className={i < review.rating ? styles.filled : styles.emptyStar}>★</span>)}</div>
-            <p className={styles.quote}>“{review.review_text}”</p>
-            <p className={styles.author}>{review.display_name}<span>Verified custom build</span></p>
+        {review ? (
+          <>
+            <article className={styles.card} style={{ "--review-progress": `${(index + 1) / reviews.length * 100}%` } as CSSProperties}>
+              {review.image_url ? <img src={review.image_url} alt={`Custom bicycle build reviewed by ${review.display_name}`} className={styles.image}/> : <div className={styles.imageFallback}>CUSTOM BUILD</div>}
+              <div className={styles.body}>
+                <div className={styles.stars} aria-label={`${review.rating} out of 5 stars`}>{Array.from({length: 5}, (_, i) => <span key={i} aria-hidden="true" className={i < review.rating ? styles.filled : styles.emptyStar}>★</span>)}</div>
+                <p className={styles.quote}>“{review.review_text}”</p>
+                <p className={styles.author}>{review.display_name}<span>Verified custom build</span></p>
+              </div>
+            </article>
+            {reviews.length > 1 ? <div className={styles.progress}><span style={{width: `${(index + 1) / reviews.length * 100}%`}}/></div> : null}
+          </>
+        ) : (
+          <div className={styles.empty}>
+            Customer build reviews will appear here after they are submitted and approved by LNR Cycle Center.
           </div>
-        </article>
-        {reviews.length > 1 ? <div className={styles.progress}><span style={{width: `${(index + 1) / reviews.length * 100}%`}}/></div> : null}
+        )}
       </div>
     </section>
   );
