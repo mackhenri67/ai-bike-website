@@ -30,14 +30,19 @@ export default function BuildReviewForm({
     if (!form) return;
     const data = new FormData(form);
     data.set("rating", String(rating));
-    const result = await submitBuildReview(data);
-    setBusy(false);
-    if (result.error) setError(result.error);
-    else {
-      setMessage("Thank you. Your review was submitted for shop approval.");
-      form.reset();
-      setRating(5);
-      router.refresh();
+    try {
+      const result = await submitBuildReview(data);
+      if (result.error) setError(result.error);
+      else {
+        setMessage("Thank you. Your review was submitted for shop approval.");
+        form.reset();
+        setRating(5);
+        router.refresh();
+      }
+    } catch {
+      setError("Your review could not be submitted. Check your connection and try again.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -69,7 +74,7 @@ export default function BuildReviewForm({
         <textarea name="reviewText" required minLength={5} maxLength={600} defaultValue={review?.review_text ?? ""} placeholder="How was your custom build?" />
       </label>
       <label className={styles.label}>Build photo
-        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required={!review} />
+        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required />
       </label>
       <label className={styles.consent}>
         <input type="checkbox" name="publicConsent" required />
