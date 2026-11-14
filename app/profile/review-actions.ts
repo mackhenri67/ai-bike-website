@@ -48,7 +48,7 @@ export async function submitBuildReview(formData: FormData): Promise<ReviewActio
 
   const { data: existing, error: existingError } = await admin
     .from("customer_build_reviews")
-    .select("id")
+    .select("id,status,image_path")
     .eq("order_id", orderId)
     .maybeSingle();
   if (existingError) return { error: "Could not check your previous review. Try again.", success: false };
