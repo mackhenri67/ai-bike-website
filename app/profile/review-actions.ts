@@ -52,7 +52,8 @@ export async function submitBuildReview(formData: FormData): Promise<ReviewActio
     .eq("order_id", orderId)
     .maybeSingle();
   if (existingError) return { error: "Could not check your previous review. Try again.", success: false };
-  if (existing) return { error: "A review has already been published for this build.", success: false };
+  if (existing && existing.status !== "rejected")
+    return { error: "A review has already been published for this build.", success: false };
 
   const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
   const objectPath = `${user.id}/${orderId}/${crypto.randomUUID()}.${extension}`;
@@ -82,13 +83,17 @@ export async function submitBuildReview(formData: FormData): Promise<ReviewActio
     updated_at: new Date().toISOString(),
   };
 
-  const { error: insertError } = await admin
-    .from("customer_build_reviews")
-    .insert(payload);
+  const result = existing
+    ? await admin.from("customer_build_reviews").update(payload).eq("id", existing.id)
+    : await admin.from("customer_build_reviews").insert(payload);
 
-  if (insertError) {
+  if (result.error) {
     await admin.storage.from("customer-build-reviews").remove([objectPath]);
-    return { error: insertError.code === "23505" ? "A review has already been published for this build." : "Your review could not be saved. Please try again.", success: false };
+    return { error: result.error.code === "23505" ? "A review has already been published for this build." : "Your review could not be saved. Please try again.", success: false };
+  }
+
+  if (existing?.image_path) {
+    await admin.storage.from("customer-build-reviews").remove([existing.image_path]);
   }
 
   revalidatePath("/profile");
