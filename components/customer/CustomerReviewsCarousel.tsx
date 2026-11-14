@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import type { CSSProperties } from "react";
+import { useRef } from "react";
 import styles from "./CustomerReviewsCarousel.module.css";
 
 type Review = {
@@ -14,9 +13,14 @@ type Review = {
 };
 
 export default function CustomerReviewsCarousel({ reviews }: { reviews: Review[] }) {
-  const [index, setIndex] = useState(0);
-  const review = reviews[index];
-  const move = (delta: number) => setIndex((current) => (current + delta + reviews.length) % reviews.length);
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  function scrollReviews(direction: -1 | 1) {
+    const track = trackRef.current;
+    if (!track) return;
+    const distance = Math.max(track.clientWidth * 0.78, 260);
+    track.scrollBy({ left: direction * distance, behavior: "smooth" });
+  }
 
   return (
     <section className={styles.section} aria-labelledby="customer-reviews-heading">
@@ -26,27 +30,54 @@ export default function CustomerReviewsCarousel({ reviews }: { reviews: Review[]
             <p className={styles.eyebrow}>LNR CYCLE CENTER</p>
             <h2 id="customer-reviews-heading">See what our customers are saying</h2>
           </div>
-          {reviews.length > 1 ? <div className={styles.controls}>
-            <button type="button" onClick={() => move(-1)} aria-label="Previous review">‹</button>
-            <span>{index + 1} / {reviews.length}</span>
-            <button type="button" onClick={() => move(1)} aria-label="Next review">›</button>
-          </div> : null}
+          {reviews.length > 1 ? (
+            <div className={styles.controls} aria-label="Review slider controls">
+              <button type="button" onClick={() => scrollReviews(-1)} aria-label="Previous reviews">‹</button>
+              <button type="button" onClick={() => scrollReviews(1)} aria-label="Next reviews">›</button>
+            </div>
+          ) : null}
         </div>
-        {review ? (
-          <>
-            <article className={styles.card} style={{ "--review-progress": `${(index + 1) / reviews.length * 100}%` } as CSSProperties}>
-              {review.image_url ? <img src={review.image_url} alt={`Custom bicycle build reviewed by ${review.display_name}`} className={styles.image}/> : <div className={styles.imageFallback}>CUSTOM BUILD</div>}
-              <div className={styles.body}>
-                <div className={styles.stars} aria-label={`${review.rating} out of 5 stars`}>{Array.from({length: 5}, (_, i) => <span key={i} aria-hidden="true" className={i < review.rating ? styles.filled : styles.emptyStar}>★</span>)}</div>
-                <p className={styles.quote}>“{review.review_text}”</p>
-                <p className={styles.author}>{review.display_name}<span>Verified custom build</span></p>
-              </div>
-            </article>
-            {reviews.length > 1 ? <div className={styles.progress}><span style={{width: `${(index + 1) / reviews.length * 100}%`}}/></div> : null}
-          </>
+
+        {reviews.length > 0 ? (
+          <div
+            ref={trackRef}
+            className={styles.track}
+            role="region"
+            aria-label="Customer custom-build reviews"
+            tabIndex={0}
+          >
+            {reviews.map((review) => (
+              <article className={styles.card} key={review.id}>
+                <div className={styles.imageWrap}>
+                  {review.image_url ? (
+                    <img
+                      src={review.image_url}
+                      alt={`Custom bicycle build shared by ${review.display_name}`}
+                      className={styles.image}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className={styles.imageFallback}>CUSTOM BUILD</div>
+                  )}
+                </div>
+                <div className={styles.body}>
+                  <div className={styles.stars} aria-label={`${review.rating} out of 5 stars`}>
+                    {Array.from({ length: 5 }, (_, index) => (
+                      <span key={index} aria-hidden="true" className={index < review.rating ? styles.filled : styles.emptyStar}>★</span>
+                    ))}
+                  </div>
+                  <p className={styles.quote}>“{review.review_text}”</p>
+                  <div className={styles.authorRow}>
+                    <p className={styles.author}>{review.display_name}</p>
+                    <span className={styles.verified}>Verified custom build</span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
         ) : (
           <div className={styles.empty}>
-            Customer build reviews will appear here after they are submitted and approved by LNR Cycle Center.
+            Be the first to share a photo and review of your custom build.
           </div>
         )}
       </div>
