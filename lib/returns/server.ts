@@ -32,7 +32,7 @@ export async function returnBody(request:Request){
 export async function returnRpc(name:string,params:Record<string,unknown>){
  const {data,error}=await returnClient().rpc(name,params);
  if(error){
-  if(["42P01","42883","PGRST202","PGRST205"].includes(error.code))throw new ReturnError("Returns are not set up yet. Apply migration 0024.",503);
+  if(["42P01","42883","PGRST202","PGRST205"].includes(error.code))throw new ReturnError(name==="lnr_record_store_sale"?"In-store sales are not set up yet. Apply migration 0025_store_sales_and_build_returns.sql.":"Returns are not set up yet. Apply migration 0024.",503);
   if(error.code==="P0001")throw new ReturnError(error.message);
   if(error.code==="23505")throw new ReturnError("This item already has an active return/refund request.",409);
   throw new ReturnError("The return request could not be saved. Please try again.",500);

@@ -4,6 +4,7 @@ import styles from "./Returns.module.css";
 export const returnDate=(s:string)=>new Date(s).toLocaleString("en-PH",{timeZone:"Asia/Manila",dateStyle:"medium",timeStyle:"short"});
 export default function ReturnDetails({request:r,admin=false}:{request:ReturnRecord;admin?:boolean}){
  return <div className={styles.details}><span className={styles.badge} data-status={r.status}>{RETURN_LABELS[r.status]}</span><p className={styles.muted}>Submitted {returnDate(r.created_at)}</p>
+ {r.return_scope==='build'?<><h3>Whole custom bike build</h3><p className={styles.muted}>All components in this order are included in this return/refund request.</p>{r.order?.order_items?<ul>{r.order.order_items.map((part,index)=><li key={index}>{part.product_name} × {part.quantity}</li>)}</ul>:null}</>:null}
  <h3>Reason for request</h3><p className={styles.pre}>{r.reason}</p>
  {r.review_note?<><h3>Admin response</h3><p className={styles.pre}>{r.review_note}</p></>:null}
  {r.reviewed_at?<p className={styles.muted}>Reviewed {returnDate(r.reviewed_at)}</p>:null}

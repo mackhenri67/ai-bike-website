@@ -13,7 +13,7 @@ const ORDER_SELECT = `
   shipping_address, shipping_latitude, shipping_longitude,
   subtotal, shipping_fee, discount, total,
   payment_method, payment_status, status, payment_reference, notes,
-  created_at, updated_at,
+  created_at, updated_at, custom_build_id, sale_channel, recorded_by,
   order_items(id, product_id, product_variant_id, product_name, size, color,
               unit_price, quantity, line_total),
   gcash_payments(id, order_id, sender_name, phone_number, reference_number,
@@ -27,7 +27,7 @@ const ORDER_SELECT_BASE = `
   shipping_address, shipping_latitude, shipping_longitude,
   subtotal, shipping_fee, discount, total,
   payment_method, payment_status, status, payment_reference, notes,
-  created_at, updated_at,
+  created_at, updated_at, custom_build_id, sale_channel, recorded_by,
   order_items(id, product_id, product_variant_id, product_name, size, color,
               unit_price, quantity, line_total)
 `;

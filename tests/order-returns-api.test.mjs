@@ -56,7 +56,7 @@ function setup(){
   rpc:async(name,params)=>{state.calls.push({name,params});return {data:name==="lnr_prepare_return_upload"?{id:asset,path:"private/"+asset+".mp4"}:{ok:true},error:state.rpcError};},
   from(table){
    const query={
-    select(){return query;},eq(key,value){state.filters.push({table,key,value});return query;},not(){return query;},order(){return query;},range(){return query;},
+    select(){return query;},eq(key,value){state.filters.push({table,key,value});return query;},not(key,operator,value){state.filters.push({table,key,value,operator});return query;},is(key,value){state.filters.push({table,key,value});return query;},order(){return query;},range(){return query;},
     async maybeSingle(){return {data:table==="customers"?{id:"customer-row",status:state.active?"active":"inactive"}:{object_path:"private/"+asset+".mp4",customer_id:"customer-row",request_id:requestId},error:null};},
     then(resolve){return Promise.resolve({data:[],error:null,count:0}).then(resolve);}
    };return query;
@@ -67,8 +67,8 @@ function setup(){
    createSignedUrl:async(path,seconds)=>{state.signed.push({path,seconds});return {data:{signedUrl:"https://storage.test/signed/evidence"},error:state.storageError};}
   };}}
  };
- const load=loader({"@/lib/supabase/server":{getUser:async()=>state.user,getAdminUser:async()=>state.admin},"@/lib/supabase/admin":{getAdminClient:()=>client}});
- return {state,customer:load("app/api/returns/route.ts"),upload:load("app/api/returns/upload/route.ts"),media:load("app/api/returns/evidence/[id]/route.ts"),admin:load("app/api/admin/returns/route.ts")};
+ const load=loader({"next/cache":{revalidatePath(){}},"@/lib/supabase/server":{getUser:async()=>state.user,getAdminUser:async()=>state.admin},"@/lib/supabase/admin":{getAdminClient:()=>client}});
+ return {state,customer:load("app/api/returns/route.ts"),upload:load("app/api/returns/upload/route.ts"),media:load("app/api/returns/evidence/[id]/route.ts"),admin:load("app/api/admin/returns/route.ts"),store:load("app/api/admin/store-sales/route.ts")};
 }
 const get=(path)=>new Request("https://shop.test"+path);
 const post=(body,origin="https://shop.test")=>new Request("https://shop.test/api/returns",{method:"POST",headers:{"Content-Type":"application/json",Origin:origin},body:JSON.stringify(body)});
@@ -160,5 +160,29 @@ test("Return summary rejects invalid pagination before querying history",async()
   const a=setup();a.state.user=user;
   assert.equal((await a.customer.GET(get('/api/returns?summary=1&page='+page))).status,400);
   assert.equal(a.state.filters.some(f=>f.table==='return_requests'),false);
+ }
+});
+
+test('Manual sale endpoint requires admin and uses the verified session actor',async()=>{
+ const a=setup();
+ const body={id:requestId,p_admin:user.id,sale:{kind:'parts',paymentMethod:'cash',confirmed:true,items:[{productId:item,quantity:1}]}};
+ assert.equal((await a.store.POST(post(body))).status,401);
+ a.state.admin={...user,user_metadata:{role:'admin'}};assert.equal((await a.store.POST(post(body))).status,403);
+ a.state.admin=admin;assert.equal((await a.store.POST(post(body))).status,200);
+ assert.equal(a.state.calls[0].name,'lnr_record_store_sale');assert.equal(a.state.calls[0].params.p_admin,admin.id);
+ assert.equal((await a.store.POST(post(body,'https://other.test'))).status,403);
+});
+test('Manual sale rejects malformed references and catalogue pagination',async()=>{
+ const a=setup();a.state.admin=admin;
+ assert.equal((await a.store.POST(post({id:'invalid',sale:{}}))).status,400);
+ assert.equal((await a.store.GET(get('/api/admin/store-sales?page=-1'))).status,400);
+ assert.equal((await a.store.GET(get('/api/admin/store-sales?page=1.2'))).status,400);
+ assert.equal(a.state.calls.length,0);
+});
+test('Admin returns filter distinguishes custom build orders and parts',async()=>{
+ for(const kind of ['parts','custom']){
+  const a=setup();a.state.admin=admin;
+  assert.equal((await a.admin.GET(get('/api/admin/returns?kind='+kind))).status,200);
+  assert.ok(a.state.filters.some(f=>f.table==='return_requests'&&f.key==='order.custom_build_id'));
  }
 });

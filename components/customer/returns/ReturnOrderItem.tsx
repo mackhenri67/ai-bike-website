@@ -51,8 +51,8 @@ export function ReturnItemDialog({order,item,onClose}:{order:OrderRow;item:Order
  }
  const latest=context?.requests[0];const canSubmit=context?.eligible&&(!latest||latest.status==="rejected");
  return <dialog ref={dialog} className={styles.dialog} aria-labelledby={"return-title-"+item.id} onCancel={e=>{if(busy)e.preventDefault();}} onClose={onClose}>
- <header className={styles.header}><div><p className={styles.eyebrow}>{order.order_number}</p><h2 id={"return-title-"+item.id}>{item.product_name}</h2></div><button type="button" className={styles.close} disabled={busy} aria-label="Close return details" onClick={()=>dialog.current?.close()}>×</button></header>
- <div className={styles.body}><p className={styles.muted}>Quantity: {item.quantity} · {[item.size,item.color].filter(Boolean).join(" · ")}</p>
+ <header className={styles.header}><div><p className={styles.eyebrow}>{order.order_number}</p><h2 id={"return-title-"+item.id}>{order.custom_build_id?"Custom bike build":item.product_name}</h2></div><button type="button" className={styles.close} disabled={busy} aria-label="Close return details" onClick={()=>dialog.current?.close()}>×</button></header>
+ <div className={styles.body}>{order.custom_build_id?<><p className={styles.notice}>This return/refund covers the whole custom bike build, including all components in this order.</p><ul>{order.order_items?.map(part=><li key={part.id}>{part.product_name} × {part.quantity}</li>)}</ul></>:<p className={styles.muted}>Quantity: {item.quantity} · {[item.size,item.color].filter(Boolean).join(" · ")}</p>}
  {loading?<p role="status">Loading return options…</p>:null}
  {context?<><h3>Return/refund</h3><p className={styles.muted}>Submit within three days (72 hours) after the order is marked delivered.</p>
  {context.completed_at?<p className={styles.muted}>Delivered: {returnDate(context.completed_at)}<br/>Request deadline: {returnDate(context.deadline!)}</p>:<p className={styles.muted}>{context.order_status==="completed"?"The completion date has not been recorded. Contact the shop to verify the delivery date.":"Return/refund requests become available after delivery."}</p>}
@@ -63,7 +63,7 @@ export function ReturnItemDialog({order,item,onClose}:{order:OrderRow;item:Order
  <label>Photos or videos<input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime,.mov" multiple disabled={busy||files.length>=3} onChange={e=>{select(e.target.files);e.target.value="";}}/></label>
  <p className={styles.muted}>Attach 1–3 files. Photos: up to 5 MB each. Videos: up to 20 MB each. Evidence is private to you and authorized shop administrators.</p>
  <ul className={styles.files}>{files.map(f=><li key={f.id}><span>{f.file.name} ({(f.file.size/1024/1024).toFixed(1)} MB)</span><button type="button" disabled={busy} aria-label={"Remove "+f.file.name} onClick={()=>setFiles(old=>old.filter(x=>x.id!==f.id))}>×</button></li>)}</ul>
- <p className={styles.muted}>This request covers this product and its listed quantity. Submission does not automatically approve a return or release a refund.</p>
+ <p className={styles.muted}>{order.custom_build_id?'This request covers the whole custom bike build.':'This request covers this product and its listed quantity.'} Submission does not automatically approve a return or release a refund.</p>
  <button type="submit" className={styles.primary} disabled={busy||!files.length}>{busy?progress||"Submitting…":"Submit for review"}</button></form>
  :context.completed_at&&!context.eligible&&(!latest||latest.status==="rejected")?<p className={styles.notice}>The three-day online request period has ended. Contact the shop for further assistance.</p>:null}</>:null}
  {error?<p className={styles.error} role="alert">{error}</p>:null}
@@ -72,5 +72,6 @@ export function ReturnItemDialog({order,item,onClose}:{order:OrderRow;item:Order
 }
 export default function ReturnOrderItem({order,item}:{order:OrderRow;item:OrderItemRow}){
  const[open,setOpen]=useState(false);
+ if(order.custom_build_id)return <div className={styles.itemButton}><img src={item.product?.product_images?.[0]?.url??PRODUCT_PLACEHOLDER_SRC} alt="" className={styles.productImage}/><span><strong>{item.product_name}</strong><span>Quantity: {item.quantity}</span><span>{[item.size,item.color].filter(Boolean).join(' · ')}</span></span></div>;
  return <><button type="button" className={styles.itemButton} onClick={()=>setOpen(true)} aria-label={"View "+item.product_name+" and return/refund options"}><img src={item.product?.product_images?.find(i=>i.is_primary)?.url??item.product?.product_images?.[0]?.url??PRODUCT_PLACEHOLDER_SRC} alt="" className={styles.productImage}/><span><strong>{item.product_name}</strong><span>Quantity: {item.quantity}</span><span>{[item.size,item.color].filter(v=>v&&!["One Size","Default","Standard"].includes(v)).join(" · ")}</span><small>{order.status==="completed"?"View item / return-refund options":"View ordered item"}</small></span></button>{open?<ReturnItemDialog order={order} item={item} onClose={()=>setOpen(false)}/>:null}</>;
 }

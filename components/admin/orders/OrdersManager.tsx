@@ -1,7 +1,8 @@
 "use client";
+import {orderDay,orderDateLabel,orderSaleLabel,type OrderManagementTab} from "@/lib/order-management";
 import RecordPreviewButton from "@/components/admin/RecordPreviewButton";
 
-import { useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type { GcashPaymentRow, OrderRow, OrderStatus } from "@/lib/data/types";
 import {
   reviewGcashPaymentAction,
@@ -36,16 +37,6 @@ type DisplayOrder = {
   longitude: number | null;
   customerPhone: string | null;
 };
-
-const TABS = [
-  { id: "all", label: "All" },
-  { id: "pending", label: "Pending" },
-  { id: "shipping", label: "Shipping" },
-  { id: "completed", label: "Completed" },
-  { id: "cancelled", label: "Cancelled" },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "Pending",
@@ -103,7 +94,7 @@ function toDisplayOrder(order: OrderRow): DisplayOrder {
     quantity,
     total: order.total,
     paymentMethod:
-      order.payment_method === "gcash" ? "GCash" : "Cash on Delivery",
+      order.payment_method === "gcash" ? "GCash" : order.payment_method === "cash" ? "Cash" : "Cash on Delivery",
     paymentStatus: order.payment_status,
     gcashPayment: toGcashPayment(order),
     date: formatDate(order.created_at),
@@ -118,17 +109,19 @@ function toDisplayOrder(order: OrderRow): DisplayOrder {
 type OrdersManagerProps = {
   initialOrders: OrderRow[];
   error?: string | null;
+  activeTab?: Exclude<OrderManagementTab,"returns">;
 };
 
 export default function OrdersManager({
   initialOrders,
   error: initialError,
+  activeTab="all",
 }: OrdersManagerProps) {
   const [orders, setOrders] = useState<DisplayOrder[]>(
     () => initialOrders.map(toDisplayOrder),
   );
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<TabId>("all");
+  useEffect(()=>{setOrders(initialOrders.map(toDisplayOrder));},[initialOrders]);
   const [verifying, setVerifying] = useState<DisplayOrder | null>(null);
   const [viewingLocation, setViewingLocation] = useState<DisplayOrder | null>(
     null,
@@ -268,26 +261,6 @@ export default function OrdersManager({
         />
       </div>
 
-      {/* --- Status tabs --- */}
-      <div
-        className={styles.tabs}
-        role="tablist"
-        aria-label="Filter orders by status"
-      >
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ""}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {/* --- Orders table --- */}
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -303,15 +276,17 @@ export default function OrdersManager({
               <th>Items</th>
               <th>Total</th>
               <th>Payment Method</th>
-              <th>Date</th>
+              <th>Sales channel</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {visibleOrders.length > 0 ? (
-              visibleOrders.map((order) => (
-                <tr key={order.dbId}>
+              visibleOrders.map((order,index) => (
+                <Fragment key={order.dbId}>
+                {index===0||orderDay(order.source.created_at)!==orderDay(visibleOrders[index-1].source.created_at)?<tr className={styles.dateSection}><th colSpan={8} scope="rowgroup">{orderDateLabel(order.source.created_at)}</th></tr>:null}
+                <tr>
                   <td className={styles.cellId}>{order.id}</td>
                   <td>
                     <p className={styles.customerName}>{order.customer}</p>
@@ -325,7 +300,7 @@ export default function OrdersManager({
                   </td>
                   <td className={styles.cellTotal}>{formatPeso(order.total)}</td>
                   <td>{order.paymentMethod}</td>
-                  <td className={styles.cellDate}>{order.date}</td>
+                  <td><span className={styles.channelBadge} data-channel={order.source.sale_channel??"online"}>{orderSaleLabel(order.source)}</span></td>
                   <td>
                     <span
                       className={`${styles.badge} ${styles[`badge${STATUS_LABELS[order.status]}`]}`}
@@ -394,7 +369,7 @@ export default function OrdersManager({
                       )}
                     </div>
                   </td>
-                </tr>
+                </tr></Fragment>
               ))
             ) : (
               <tr>
@@ -423,7 +398,7 @@ export default function OrdersManager({
           >
             <div className={styles.modalHeader}>
               <h2 id="verify-title" className={styles.modalTitle}>
-                Review GCash Payment
+                {verifying.source.sale_channel==='in_store'?'Recorded GCash payment':'Review GCash Payment'}
               </h2>
               <button
                 type="button"
@@ -607,7 +582,7 @@ export default function OrdersManager({
               </>
             ) : (
               <p className={styles.noPayment}>
-                No payment has been submitted for this order yet.
+                {verifying.source.sale_channel==='in_store'&&verifying.paymentStatus==='paid'?`Payment was collected in-store. Reference: ${verifying.source.payment_reference||'Not provided'}. No online payment screenshot is required.`:'No payment has been submitted for this order yet.'}
               </p>
             )}
 

@@ -85,7 +85,7 @@ export type CustomerRow = {
 };
 
 export type OrderStatus = "pending" | "shipping" | "completed" | "cancelled";
-export type PaymentMethod = "gcash" | "cod";
+export type PaymentMethod = "gcash" | "cod" | "cash";
 export type PaymentStatus =
   | "pending"
   | "paid"
@@ -108,6 +108,8 @@ export type OrderItemRow = {
 };
 
 export type OrderRow = {
+  sale_channel?: "online" | "in_store";
+  recorded_by?: string | null;
   payment_receipt?: { url: string | null; sender: string | null; reference: string | null; status: string } | null;
   custom_build_id?: string | null;
   build_review?: {
