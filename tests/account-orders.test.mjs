@@ -27,3 +27,14 @@ test('Search works with category filters, case differences and missing order ite
  assert.equal(filterAccountOrders(orders,'shipping',[],'helmet').length,0);
  assert.equal(filterAccountOrders([{...orders[0],order_items:undefined}],'all',[],'nothing').length,0);
 });
+
+test('Event filters keep cancelled paid tickets out of Paid and pending tickets out of Paid',()=>{
+ const events=[{id:'pending',status:'registered',payment_status:'pending'},{id:'rejected',status:'registered',payment_status:'rejected'},{id:'paid',status:'registered',payment_status:'paid'},{id:'cancelled-paid',status:'cancelled',payment_status:'paid'},{id:'cancelled-unpaid',status:'cancelled',payment_status:'pending'}];
+ const filter=unit.exports.filterAccountEvents;
+ assert.deepEqual(filter(events,'all').map(e=>e.id),events.map(e=>e.id));
+ assert.deepEqual(filter(events,'pending').map(e=>e.id),['pending','rejected']);
+ assert.deepEqual(filter(events,'paid').map(e=>e.id),['paid']);
+ assert.deepEqual(filter(events,'cancelled').map(e=>e.id),['cancelled-paid','cancelled-unpaid']);
+ const cancelled=events.map(e=>e.id==='paid'?{...e,status:'cancelled'}:e);
+ assert.equal(filter(cancelled,'paid').length,0);assert.equal(filter(cancelled,'cancelled').length,3);
+});

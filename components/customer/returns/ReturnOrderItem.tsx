@@ -70,8 +70,6 @@ export function ReturnItemDialog({order,item,onClose}:{order:OrderRow;item:Order
  {!loading?<button type="button" className={styles.secondary} disabled={busy} onClick={()=>{setLoading(true);setError(null);load().catch(e=>setError(e.message)).finally(()=>setLoading(false));}}>Refresh status</button>:null}
  </div></dialog>;
 }
-export default function ReturnOrderItem({order,item}:{order:OrderRow;item:OrderItemRow}){
- const[open,setOpen]=useState(false);
- if(order.custom_build_id)return <div className={styles.itemButton}><img src={item.product?.product_images?.[0]?.url??PRODUCT_PLACEHOLDER_SRC} alt="" className={styles.productImage}/><span><strong>{item.product_name}</strong><span>Quantity: {item.quantity}</span><span>{[item.size,item.color].filter(Boolean).join(' · ')}</span></span></div>;
- return <><button type="button" className={styles.itemButton} onClick={()=>setOpen(true)} aria-label={"View "+item.product_name+" and return/refund options"}><img src={item.product?.product_images?.find(i=>i.is_primary)?.url??item.product?.product_images?.[0]?.url??PRODUCT_PLACEHOLDER_SRC} alt="" className={styles.productImage}/><span><strong>{item.product_name}</strong><span>Quantity: {item.quantity}</span><span>{[item.size,item.color].filter(v=>v&&!["One Size","Default","Standard"].includes(v)).join(" · ")}</span><small>{order.status==="completed"?"View item / return-refund options":"View ordered item"}</small></span></button>{open?<ReturnItemDialog order={order} item={item} onClose={()=>setOpen(false)}/>:null}</>;
+export default function ReturnOrderItem({item}:{order:OrderRow;item:OrderItemRow}){
+ return <div className={`${styles.itemButton} ${styles.itemSummary}`}><img src={item.product?.product_images?.find(i=>i.is_primary)?.url??item.product?.product_images?.[0]?.url??PRODUCT_PLACEHOLDER_SRC} alt="" className={styles.productImage}/><span><strong>{item.product_name}</strong><span>Quantity: {item.quantity}</span><span>{[item.size,item.color].filter(v=>v&&!["One Size","Default","Standard"].includes(v)).join(" · ")}</span></span></div>;
 }

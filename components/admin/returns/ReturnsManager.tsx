@@ -6,7 +6,6 @@ import {RETURN_LABELS,type ReturnRecord,type ReturnStatus} from "@/lib/returns/t
 import ReturnDetails,{returnDate} from "@/components/customer/returns/ReturnDetails";
 import common from "@/components/customer/returns/Returns.module.css";
 import styles from "./ReturnsManager.module.css";
-import LegacyDeliveryDates from "./LegacyDeliveryDates";
 type Page={requests:ReturnRecord[];page:number;total:number;hasMore:boolean};
 function Review({request:initial,onClose,onChanged}:{request:ReturnRecord;onClose:()=>void;onChanged:()=>Promise<void>}){
  const[request,setRequest]=useState(initial);const[decision,setDecision]=useState<"approved"|"rejected"|"received"|"refunded"|null>(null);
@@ -47,7 +46,6 @@ export default function ReturnsManager({kind}:{kind?:OrderKind}){
  {loading?<p className={styles.empty} role="status">Loading requests…</p>:<><div className={styles.tableWrap}><table><thead><tr><th>Order / customer</th><th>Return scope</th><th>Submitted</th><th>Status</th><th>Return method</th><th>Action</th></tr></thead><tbody>{data.requests.map(r=><tr key={r.id}><td><strong>{r.order?.order_number}</strong><small>{r.order?.customer_name}</small></td><td>{r.return_scope==='build'?'Whole custom bike build':r.item?.product_name}<small>Quantity: {r.item?.quantity} · {r.evidence.length} evidence file(s)</small></td><td>{returnDate(r.created_at)}</td><td><span className={common.badge} data-status={r.status}>{RETURN_LABELS[r.status]}</span></td><td>{r.return_method==="rider_pickup"?"Rider pickup":r.return_method==="store_dropoff"?"Store drop-off":"Not selected"}</td><td><button type="button" className={common.secondary} onClick={()=>setSelected(r)} aria-label={"Review return for "+r.order?.order_number}>View / review</button></td></tr>)}</tbody></table></div>
  {!data.requests.length?<p className={styles.empty}>No return/refund requests in this status.</p>:null}
  <div className={styles.pagination}><span>{data.total} request(s) · Page {page+1}</span><button type="button" className={common.secondary} disabled={!page} onClick={()=>setPage(p=>p-1)}>Previous</button><button type="button" className={common.secondary} disabled={!data.hasMore} onClick={()=>setPage(p=>p+1)}>Next</button></div></>}
- <LegacyDeliveryDates/>
  {selected?<Review request={selected} onClose={()=>setSelected(null)} onChanged={load}/>:null}
  </section>;
 }
