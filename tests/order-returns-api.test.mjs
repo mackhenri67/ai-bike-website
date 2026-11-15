@@ -145,3 +145,20 @@ test("Only the admin session can record verified missing delivery timestamps",as
  assert.equal(a.state.calls[0].params.p_user,admin.id);
  assert.equal((await a.admin.POST(post({...body,when:"invalid"}))).status,400);
 });
+
+test("Return summary requires login and scopes results to the session customer",async()=>{
+ const a=setup();assert.equal((await a.customer.GET(get("/api/returns?summary=1"))).status,401);
+ a.state.user=user;
+ const response=await a.customer.GET(get("/api/returns?summary=1&customer_id=forged"));
+ assert.equal(response.status,200);
+ assert.deepEqual(await response.json(),{requests:[],hasMore:false});
+ assert.ok(a.state.filters.some(f=>f.table==="return_requests"&&f.key==="customer_id"&&f.value==="customer-row"));
+ assert.equal(a.state.calls.length,0);
+});
+test("Return summary rejects invalid pagination before querying history",async()=>{
+ for(const page of ['-1','1.5','no','1001']){
+  const a=setup();a.state.user=user;
+  assert.equal((await a.customer.GET(get('/api/returns?summary=1&page='+page))).status,400);
+  assert.equal(a.state.filters.some(f=>f.table==='return_requests'),false);
+ }
+});

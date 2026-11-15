@@ -17,12 +17,12 @@ function MethodForm({request:r,onSaved,busy,setBusy,defaultPickup}:{request:Retu
  {method==="rider_pickup"?<label>Pickup address and contact number<textarea value={details} onChange={e=>setDetails(e.target.value)} minLength={10} maxLength={1000} required disabled={busy} rows={3}/></label>:null}
  {error?<p className={styles.error} role="alert">{error}</p>:null}<button className={styles.primary} disabled={busy||!method}>{busy?"Saving…":"Save return method"}</button></form>;
 }
-function ReturnDialog({order,item,onClose}:{order:OrderRow;item:OrderItemRow;onClose:()=>void}){
+export function ReturnItemDialog({order,item,onClose}:{order:OrderRow;item:OrderItemRow;onClose:()=>void}){
  const dialog=useRef<HTMLDialogElement>(null);const[context,setContext]=useState<ReturnContext|null>(null);const[loading,setLoading]=useState(true);const[busy,setBusy]=useState(false);
  const[error,setError]=useState<string|null>(null);const[reason,setReason]=useState("");const[files,setFiles]=useState<SelectedFile[]>([]);const[progress,setProgress]=useState("");
  const requestId=useRef<string|null>(null);
- async function load(){setContext(await returnFetch<ReturnContext>("/api/returns?item="+encodeURIComponent(item.id)));}
- useEffect(()=>{dialog.current?.showModal();const previous=document.body.style.overflow;document.body.style.overflow="hidden";const c=new AbortController();
+ async function load(){setContext(await returnFetch<ReturnContext>("/api/returns?item="+encodeURIComponent(item.id)));window.dispatchEvent(new Event("lnr:returns-updated"));}
+ useEffect(()=>{if(dialog.current&&!dialog.current.open)dialog.current.showModal();const previous=document.body.style.overflow;document.body.style.overflow="hidden";const c=new AbortController();
  returnFetch<ReturnContext>("/api/returns?item="+encodeURIComponent(item.id),undefined,c.signal).then(setContext).catch(e=>{if(!c.signal.aborted)setError(e.message);}).finally(()=>{if(!c.signal.aborted)setLoading(false);});
  return()=>{c.abort();document.body.style.overflow=previous;};},[item.id]);
  function select(list:FileList|null){
@@ -72,5 +72,5 @@ function ReturnDialog({order,item,onClose}:{order:OrderRow;item:OrderItemRow;onC
 }
 export default function ReturnOrderItem({order,item}:{order:OrderRow;item:OrderItemRow}){
  const[open,setOpen]=useState(false);
- return <><button type="button" className={styles.itemButton} onClick={()=>setOpen(true)} aria-label={"View "+item.product_name+" and return/refund options"}><img src={item.product?.product_images?.find(i=>i.is_primary)?.url??item.product?.product_images?.[0]?.url??PRODUCT_PLACEHOLDER_SRC} alt="" className={styles.productImage}/><span><strong>{item.product_name}</strong><span>Quantity: {item.quantity}</span><span>{[item.size,item.color].filter(v=>v&&!["One Size","Default","Standard"].includes(v)).join(" · ")}</span><small>{order.status==="completed"?"View item / return-refund options":"View ordered item"}</small></span></button>{open?<ReturnDialog order={order} item={item} onClose={()=>setOpen(false)}/>:null}</>;
+ return <><button type="button" className={styles.itemButton} onClick={()=>setOpen(true)} aria-label={"View "+item.product_name+" and return/refund options"}><img src={item.product?.product_images?.find(i=>i.is_primary)?.url??item.product?.product_images?.[0]?.url??PRODUCT_PLACEHOLDER_SRC} alt="" className={styles.productImage}/><span><strong>{item.product_name}</strong><span>Quantity: {item.quantity}</span><span>{[item.size,item.color].filter(v=>v&&!["One Size","Default","Standard"].includes(v)).join(" · ")}</span><small>{order.status==="completed"?"View item / return-refund options":"View ordered item"}</small></span></button>{open?<ReturnItemDialog order={order} item={item} onClose={()=>setOpen(false)}/>:null}</>;
 }

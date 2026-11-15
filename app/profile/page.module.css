@@ -422,3 +422,6 @@
 
 .sectionHeading { margin: 8px 0 0; font-size: 24px; font-weight: 800; color: #1f2937; }
 @media(max-width: 600px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+.page{background:#f7f8fa;font-family:var(--font-inter),Arial,sans-serif;padding-top:44px}.container{gap:24px}.title{font-size:30px;line-height:1.25;letter-spacing:-.035em;font-weight:750}.subtitle{margin-top:9px;color:#667085}.signOut{border-color:#e4e7ec;border-radius:9px;color:#667085}.card{border-radius:16px;box-shadow:0 2px 8px #10182804}.cardTitle{letter-spacing:-.02em;font-weight:650}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.input{border-radius:9px}.button{border-radius:9px}.sectionHeading{font-size:23px;letter-spacing:-.025em;font-weight:700}
+@media(max-width:700px){.grid{grid-template-columns:minmax(0,1fr)}.page{padding:28px 16px 48px}.title{font-size:26px}}
