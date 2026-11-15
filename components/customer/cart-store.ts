@@ -42,7 +42,7 @@ export type AddToCartInput = {
   stock: number;
 };
 
-export const SHIPPING_FEE = 190;
+
 
 /**
  * A brand-new visitor starts with an empty cart. Contents are restored from
@@ -75,8 +75,8 @@ export function calculateSubtotal(items: CartItem[]): number {
   return sum;
 }
 
-export function calculateTotal(subtotal: number): number {
-  return subtotal + SHIPPING_FEE;
+export function calculateTotal(subtotal: number, shippingFee: number): number {
+  return Math.round((subtotal + shippingFee) * 100) / 100;
 }
 
 /** Number of selected product lines (not their quantities). */

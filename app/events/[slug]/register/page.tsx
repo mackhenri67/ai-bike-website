@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
-import { getPublishedEventBySlug } from "@/lib/data/customer/events";
+import { getPublishedEventBySlug, getMyActiveEventRegistration } from "@/lib/data/customer/events";
 import CustomerHeader from "@/components/customer/CustomerHeader";
 import CustomerFooter from "@/components/customer/CustomerFooter";
 import EventSteps from "@/components/customer/EventSteps";
@@ -30,6 +30,7 @@ export default async function EventRegisterPage({
   const result = await getPublishedEventBySlug(slug);
   const event = result.data;
   if (!event) notFound();
+  const active=await getMyActiveEventRegistration(event.id);
 
   return (
     <>
@@ -41,8 +42,8 @@ export default async function EventRegisterPage({
             <p className={styles.subtitle}>
               {new Date(event.event_date).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", dateStyle: "full" })} · {event.capacity > 0 ? `${Math.max(0, event.capacity - event.slots_booked)} slots left` : "Open registration"}
             </p>
-            <EventSteps current={1} />
-            <RegisterView event={event} email={user.email} fullName={typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : undefined} />
+            {active.error?<section className={styles.card}><h2 className={styles.heading}>Registration unavailable</h2><p className={styles.error} role="alert">{active.error}</p><Link href={`/events/${event.slug}/register`} className={styles.back}>Try again</Link></section>:active.data?<section className={styles.card} aria-label="Existing registration"><h2 className={styles.heading}>You’re already registered</h2><p>You can only have one active ticket for this event. View your existing registration in My Events, or cancel it there before signing up again.</p><p>Registration: <strong>{active.data.registrationCode}</strong></p><div className={styles.existingActions}><Link href={`/profile?tab=events&ticket=${encodeURIComponent(active.data.registrationCode)}`} className={styles.existingPrimary}>View my ticket</Link>{active.data.paymentStatus!=="paid"?<Link href={`/event-payment/${encodeURIComponent(active.data.registrationCode)}`} className={styles.back}>View payment</Link>:null}<Link href="/profile?tab=events" className={styles.back}>Go to My Events</Link></div></section>:<><EventSteps current={1} />
+            <RegisterView event={event} email={user.email} fullName={typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : undefined} /></>}
         </div>
       </main>
       <CustomerFooter />

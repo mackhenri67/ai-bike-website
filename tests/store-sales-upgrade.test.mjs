@@ -82,6 +82,7 @@ before(async () => {
     "0023_customer_build_reviews.sql",
     "0024_order_returns.sql",
     "0025_store_sales_and_build_returns.sql",
+    "0027_manual_sale_custom_items.sql",
   ]) {
     try {
       await db.exec(
@@ -108,4 +109,10 @@ test('Store sales upgrade works with real order schema and variant/cancellation 
  assert.equal(await scalar('select sale_channel from orders where id=$1',[saleId]),'in_store');
  await cancel(saleId);assert.equal(await stock(),5);await cancel(saleId);assert.equal(await stock(),5);
  const roles=await query("select privilege_type from information_schema.routine_privileges where routine_name='lnr_record_store_sale' and grantee in('anon','authenticated','PUBLIC')");assert.equal(roles.rows.length,0);
+});
+
+test('Custom line upgrade stores address and works with production order-item constraints',async()=>{
+ const id='99000000-0000-4000-8000-000000000002';
+ const result=await scalar('select lnr_record_store_sale($1,$2,$3::jsonb)',[admin,id,JSON.stringify({kind:'parts',paymentMethod:'cash',confirmed:true,address:'Test barangay, Tabaco City',items:[{type:'custom',name:'Special fitting part',unitPrice:125.5,quantity:2}]})]);
+ assert.equal(Number(result.total),251);const line=(await query('select * from order_items where order_id=$1',[id])).rows[0];assert.equal(line.is_custom_item,true);assert.equal(line.product_id,null);assert.equal(await scalar('select shipping_address from orders where id=$1',[id]),'Test barangay, Tabaco City');
 });

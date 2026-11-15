@@ -133,6 +133,23 @@ export async function listMyEventRegistrations(
   };
 }
 
+export const ACTIVE_EVENT_REGISTRATION_MESSAGE = "You already have an active registration for this event. Open My Events to view or cancel your ticket before signing up again.";
+export type ActiveEventRegistration = {registrationCode:string;paymentStatus:string};
+/** Checks only the signed-in customer's active ticket, never a supplied customer ID. */
+export async function getMyActiveEventRegistration(eventId:string):Promise<QueryResult<ActiveEventRegistration>>{
+ const user=await getUser();
+ if(!user)return {data:null,error:"Sign in with a customer account."};
+ const admin=getAdminClient();
+ if(!admin)return {data:null,error:missingServiceRoleMessage()};
+ const customer=await admin.from("customers").select("id").eq("auth_user_id",user.id).maybeSingle();
+ if(customer.error)return {data:null,error:"Your event registration could not be checked. Please try again."};
+ if(!customer.data)return {data:null,error:null};
+ const result=await admin.from("event_registrations").select("registration_code,payment_status")
+ .eq("event_id",eventId).eq("customer_id",customer.data.id).eq("status","registered").maybeSingle();
+ if(result.error)return {data:null,error:"Your event registration could not be checked. Please try again."};
+ return {data:result.data?{registrationCode:result.data.registration_code,paymentStatus:result.data.payment_status}:null,error:null};
+}
+
 export type CreateEventRegistrationInput = {
   eventId: string;
   customerId: string;
@@ -158,6 +175,9 @@ export async function createEventRegistration(
 
   const user = await getUser();
   if (!user) return { data: null, error: "Sign in with a customer account." };
+  const active=await getMyActiveEventRegistration(input.eventId);
+  if(active.error)return {data:null,error:active.error};
+  if(active.data)return {data:null,error:ACTIVE_EVENT_REGISTRATION_MESSAGE};
   const { data, error } = await admin.rpc("lnr_register_event_with_contact", {
     p_user: user.id,
     p_event: input.eventId,
@@ -169,7 +189,7 @@ export async function createEventRegistration(
     data: error
       ? null
       : (data as { registrationCode: string; paymentMethod: string }),
-    error: error ? toFriendlyDbError(error) : null,
+    error: error ? (error.code==="23505"?ACTIVE_EVENT_REGISTRATION_MESSAGE:toFriendlyDbError(error)) : null,
   };
 }
 

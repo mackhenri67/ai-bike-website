@@ -240,3 +240,5 @@
 /* Unified LNR admin design */
 
 .page{max-width:850px}.title{margin:0}.subtitle{margin:8px 0 28px;font-size:13px;color:#7a827c}.card{margin-top:0;padding:30px;border-radius:14px}.field{margin-bottom:26px}.uploadArea{background:#fafbf7;border-color:#dce5d3;border-radius:10px}
+
+.extraSettings{display:grid;gap:24px;margin-top:24px}.sectionTitle{margin:0 0 8px;font-size:17px;color:#172033}.extraSettings .hint{margin-bottom:22px}

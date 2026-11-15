@@ -9,13 +9,13 @@ import {
   calculateSubtotal,
   calculateTotal,
   formatCurrency,
-  SHIPPING_FEE,
 } from "@/components/customer/cart-store";
 import { placeOrder } from "./actions";
 import styles from "./page.module.css";
 
 type CheckoutViewProps = {
   direct?: boolean;
+  shippingFee: number;
   customerName: string;
   location: {
     label: string | null;
@@ -40,6 +40,7 @@ export default function CheckoutView({
   customerName,
   location,
   direct = false,
+  shippingFee,
 }: CheckoutViewProps) {
   const { items } = useCart();
   const directItems = useDirectCheckout();
@@ -57,7 +58,7 @@ export default function CheckoutView({
     () => calculateSubtotal(selectedItems),
     [selectedItems],
   );
-  const total = useMemo(() => calculateTotal(subtotal), [subtotal]);
+  const total = useMemo(() => calculateTotal(subtotal, shippingFee), [subtotal, shippingFee]);
 
   if (selectedItems.length === 0) {
     return (
@@ -173,7 +174,7 @@ export default function CheckoutView({
           </div>
           <div className={styles.totalRow}>
             <dt>Shipping</dt>
-            <dd>{formatCurrency(SHIPPING_FEE)}</dd>
+            <dd>{formatCurrency(shippingFee)}</dd>
           </div>
           <div className={`${styles.totalRow} ${styles.grand}`}>
             <dt>Total</dt>
@@ -182,6 +183,7 @@ export default function CheckoutView({
         </dl>
 
         <form action={formAction} noValidate>
+          <input type="hidden" name="shipping_fee" value={shippingFee} />
           <input type="hidden" name="checkout_mode" value={direct ? "buy-now" : "cart"} />
             <input type="hidden" name="items" value={itemsJson} />
           <input type="hidden" name="payment_method" value={paymentMethod} />

@@ -184,15 +184,22 @@ export async function getCatalogProducts(
     query = query.or(`name.ilike.%${term}%,description.ilike.%${term}%`);
   }
 
-  query = query.order("sort_order", { ascending: true });
-  if (options.limit) query = query.limit(options.limit);
-
-  const { data, error } = await query;
-  if (error || !data) return null;
-
-  return (data as Parameters<typeof mapCatalogProduct>[0][]).map(
-    mapCatalogProduct,
-  );
+  query = query.order("sort_order", { ascending: true }).order("id", { ascending: true });
+  if(options.limit){
+    const {data,error}=await query.limit(options.limit);
+    if(error||!data)return null;
+    return (data as Parameters<typeof mapCatalogProduct>[0][]).map(mapCatalogProduct);
+  }
+  // Fetch the complete filtered catalogue in bounded batches before slicing
+  // storefront pages, so the API's row limit cannot hide later pages.
+  const products:CatalogProduct[]=[];
+  for(let offset=0;;offset+=500){
+    const {data,error}=await query.range(offset,offset+499);
+    if(error||!data)return null;
+    products.push(...(data as Parameters<typeof mapCatalogProduct>[0][]).map(mapCatalogProduct));
+    if(data.length<500)break;
+  }
+  return products;
 }
 
 export async function getCatalogProductBySlug(

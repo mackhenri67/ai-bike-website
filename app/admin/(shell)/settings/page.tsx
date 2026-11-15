@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getGcashSettings } from "@/lib/data/admin/gcash";
+import { getShippingFee } from "@/lib/data/shipping";
+import SecurityShippingForms from "./security-shipping-forms";
 import SettingsForm from "./settings-form";
 import styles from "./page.module.css";
 
@@ -16,14 +18,13 @@ export const metadata: Metadata = {
  * `gcash_settings` singleton, so the QR the customers scan is never static.
  */
 export default async function AdminSettingsPage() {
-  const result = await getGcashSettings();
+  const [result, shipping] = await Promise.all([getGcashSettings(), getShippingFee()]);
 
   return (
     <section className={styles.page}>
       <h1 className={styles.title}>Settings</h1>
       <p className={styles.subtitle}>
-        These merchant GCash details are shown to customers on the GCash payment
-        page. You can update the QR code and account number anytime.
+        Manage merchant GCash details, shipping fees, and your administrator password.
       </p>
 
       <SettingsForm
@@ -31,6 +32,7 @@ export default async function AdminSettingsPage() {
         initialGcashNumber={result.data?.gcash_number ?? null}
         error={result.error ?? undefined}
       />
+      <SecurityShippingForms shippingFee={shipping.data} shippingError={shipping.error} />
     </section>
   );
 }

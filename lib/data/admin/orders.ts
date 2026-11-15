@@ -15,7 +15,7 @@ const ORDER_SELECT = `
   payment_method, payment_status, status, payment_reference, notes,
   created_at, updated_at, custom_build_id, sale_channel, recorded_by,
   order_items(id, product_id, product_variant_id, product_name, size, color,
-              unit_price, quantity, line_total),
+              unit_price, quantity, line_total, is_custom_item),
   gcash_payments(id, order_id, sender_name, phone_number, reference_number,
                  screenshot_url, status, rejection_reason, created_at,
                  reviewed_at, reviewed_by)
@@ -29,7 +29,7 @@ const ORDER_SELECT_BASE = `
   payment_method, payment_status, status, payment_reference, notes,
   created_at, updated_at, custom_build_id, sale_channel, recorded_by,
   order_items(id, product_id, product_variant_id, product_name, size, color,
-              unit_price, quantity, line_total)
+              unit_price, quantity, line_total, is_custom_item)
 `;
 
 export async function listOrders(): Promise<QueryResult<OrderRow[]>> {

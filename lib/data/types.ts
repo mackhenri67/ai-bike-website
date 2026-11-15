@@ -94,6 +94,7 @@ export type PaymentStatus =
   | "rejected";
 
 export type OrderItemRow = {
+  is_custom_item?: boolean;
   product?: { product_images?: { url: string; is_primary: boolean; sort_order: number }[] } | null;
   id: string;
   order_id: string;

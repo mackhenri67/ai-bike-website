@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import {productListingHref} from "@/lib/product-pagination";
 import { Fragment, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { CatalogProduct } from "@/lib/products";
@@ -29,6 +31,8 @@ type BikeEquipmentProps = {
   sortOptions: readonly SortOption[];
   allProductsCount: number;
   categoryCount: number;
+  page?:number;
+  totalPages?:number;
 };
 
 /**
@@ -50,28 +54,15 @@ export default function BikeEquipment({
   sortOptions,
   allProductsCount,
   categoryCount,
+  page=1,
+  totalPages=1,
 }: BikeEquipmentProps) {
   const router = useRouter();
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(query);
 
   /** Rebuilds a `/products` URL from the current filters + a patch. */
-  const buildHref = (patch: {
-    category?: string | null;
-    q?: string;
-    sort?: string;
-  }): string => {
-    const params = new URLSearchParams();
-    const category =
-      patch.category === undefined ? activeCategory : patch.category;
-    const q = patch.q === undefined ? query : patch.q;
-    const sort = patch.sort === undefined ? activeSort : patch.sort;
-    if (category) params.set("category", category);
-    if (q) params.set("q", q);
-    if (sort && sort !== "featured") params.set("sort", sort);
-    const queryString = params.toString();
-    return `/products${queryString ? `?${queryString}` : ""}`;
-  };
+  const buildHref = (patch:{category?:string|null;q?:string;sort?:string;page?:number}) => productListingHref({category:patch.category===undefined?activeCategory:patch.category,q:patch.q===undefined?query:patch.q,sort:patch.sort===undefined?activeSort:patch.sort,page:patch.page??1});
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -257,6 +248,7 @@ export default function BikeEquipment({
           Try a different filter or search term.
         </p>
       )}
+      {categoryCount>0?<nav className={styles.pagination} aria-label="Product pages">{page>1?<Link href={buildHref({page:page-1})} aria-label="Previous page">←</Link>:<span aria-disabled="true" aria-label="Previous page">←</span>}<p aria-live="polite">Page {page} of {totalPages}</p>{page<totalPages?<Link href={buildHref({page:page+1})} aria-label="Next page">→</Link>:<span aria-disabled="true" aria-label="Next page">→</span>}</nav>:null}
     </section>
   );
 }

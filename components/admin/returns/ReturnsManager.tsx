@@ -1,5 +1,5 @@
 "use client";
-import type {OrderKind} from "@/lib/order-management";
+import type {OrderKind,OrderView} from "@/lib/order-management";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {returnFetch} from "@/lib/returns/client";
 import {RETURN_LABELS,type ReturnRecord,type ReturnStatus} from "@/lib/returns/types";
@@ -35,7 +35,7 @@ function Review({request:initial,onClose,onChanged}:{request:ReturnRecord;onClos
  {request.status==="approved"?<p className={common.notice}>Awaiting the customer’s return-method selection in My Orders.</p>:null}
  {error?<p className={common.error} role="alert">{error}</p>:null}</div></dialog>;
 }
-export default function ReturnsManager({kind}:{kind?:OrderKind}){
+export default function ReturnsManager({kind}:{kind?:OrderKind|OrderView}){
  const[status,setStatus]=useState<"all"|ReturnStatus>("pending");const[page,setPage]=useState(0);
  const[data,setData]=useState<Page>({requests:[],page:0,total:0,hasMore:false});const[error,setError]=useState<string|null>(null);const[loading,setLoading]=useState(true);const[selected,setSelected]=useState<ReturnRecord|null>(null);
  const seq=useRef(0);

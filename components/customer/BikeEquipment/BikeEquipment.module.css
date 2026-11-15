@@ -378,3 +378,4 @@
 .childRow.childRowFirst td:first-child::before {
   top: 14px;
 }
+.pagination{display:flex;justify-content:center;align-items:center;gap:24px;padding:48px 0 12px}.pagination p{margin:0;color:#344054;font:inherit;font-size:14px}.pagination a,.pagination>span{display:grid;place-items:center;width:42px;height:42px;border:1px solid #cdd2d8;background:white;color:#20252c;text-decoration:none;font-size:23px}.pagination a:hover{border-color:#c7a82f;background:#fffbed}.pagination [aria-disabled=true]{color:#b0b6bf;border-color:#e5e7eb}.pagination a:focus-visible{outline:2px solid #b58d10;outline-offset:3px}

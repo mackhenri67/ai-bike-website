@@ -16,6 +16,7 @@ export default function BuildReviewForm({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [rating, setRating] = useState(review?.rating ?? 5);
+  const [photoName,setPhotoName]=useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +41,7 @@ export default function BuildReviewForm({
         setMessage("Your review is now live. Thank you for sharing your build!");
         form.reset();
         setRating(5);
+        setPhotoName("");
         router.refresh();
       }
     } catch {
@@ -66,18 +68,11 @@ export default function BuildReviewForm({
         <strong>Review your custom build</strong>
         <span>Your review and photo will be published as soon as you submit.</span>
       </div>
-      <div className={styles.stars} role="radiogroup" aria-label="Rating">
-        {[1, 2, 3, 4, 5].map((value) => (
-          <button key={value} type="button" onClick={() => setRating(value)} aria-pressed={rating === value} aria-label={`${value} star`} className={rating >= value ? styles.starActive : styles.star}>★</button>
-        ))}
-      </div>
-      <input type="hidden" name="rating" value={rating} />
+      <fieldset className={styles.ratingField} disabled={busy}><legend>Your rating</legend><div className={styles.stars}>{[1,2,3,4,5].map(value=><label key={value} className={rating>=value?styles.starActive:styles.star}><input type="radio" name="rating" value={value} checked={rating===value} onChange={()=>setRating(value)}/><span aria-hidden="true">★</span><span className={styles.srOnly}>{value} {value===1?'star':'stars'}</span></label>)}<span className={styles.ratingValue}>{rating} / 5</span></div></fieldset>
       <label className={styles.label}>Your review
         <textarea name="reviewText" required minLength={5} maxLength={600} defaultValue={review?.status === "rejected" ? review.review_text : ""} placeholder="How was your custom build?" />
       </label>
-      <label className={styles.label}>Build photo
-        <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required />
-      </label>
+      <label className={styles.upload}><span className={styles.uploadIcon} aria-hidden="true">＋</span><span><strong>{photoName||'Attach a photo of your build'}</strong><small>JPG, PNG or WebP · up to 5 MB</small></span><input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required disabled={busy} aria-label="Build photo" onChange={e=>setPhotoName(e.target.files?.[0]?.name??'')}/></label>
       <label className={styles.consent}>
         <input type="checkbox" name="publicConsent" required />
         I agree that my review, display name, and build photo will be displayed publicly.

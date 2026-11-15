@@ -55,6 +55,7 @@ export default function CustomerReviewsCarousel({ reviews }: { reviews: Review[]
               )}
             </div>
             <div className={styles.body}>
+              <h3 className={styles.buildTitle}>{review.display_name}’s Custom Build</h3>
               <div className={styles.stars} aria-label={`${review.rating} out of 5 stars`}>
                 {Array.from({ length: 5 }, (_, starIndex) => (
                   <span

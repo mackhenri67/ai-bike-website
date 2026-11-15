@@ -1,3 +1,4 @@
+import {paginateProducts} from "@/lib/product-pagination";
 import type { Metadata } from "next";
 import CustomerHeader from "@/components/customer/CustomerHeader";
 import CustomerFooter from "@/components/customer/CustomerFooter";
@@ -30,6 +31,7 @@ type Props = {
     category?: string | string[] | undefined;
     q?: string | string[] | undefined;
     sort?: string | string[] | undefined;
+    page?: string | string[] | undefined;
   }>;
 };
 
@@ -185,6 +187,7 @@ export default async function ProductsPage({ searchParams }: Props) {
     return product.categorySlug === categorySlug;
   });
   const products = sortProducts(filtered, activeSort);
+  const pagination=paginateProducts(products,params.page);
 
   return (
     <div className={styles.page}>
@@ -198,7 +201,9 @@ export default async function ProductsPage({ searchParams }: Props) {
           </ListingPageHeader>
           <div className={`${listingStyles.container} ${listingStyles.content}`}>
             <BikeEquipment
-              products={products}
+              products={pagination.items}
+              page={pagination.page}
+              totalPages={pagination.pages}
               rows={rows}
               activeCategory={categorySlug ?? null}
               query={query ?? ""}

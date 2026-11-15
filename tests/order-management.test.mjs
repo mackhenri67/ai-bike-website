@@ -3,3 +3,5 @@ const unit={exports:{}};vm.runInThisContext('(function(exports){'+ts.transpileMo
 const {orderDay,orderDateLabel,orderMatchesKind,orderSaleLabel}=unit.exports;
 test('Online and in-store sales share the correct parts/custom grouping',()=>{assert.equal(orderSaleLabel({sale_channel:'in_store'}),'In-store sale');assert.equal(orderSaleLabel({}),'Online sale');assert.equal(orderMatchesKind({custom_build_id:'build'},'custom'),true);assert.equal(orderMatchesKind({custom_build_id:null},'parts'),true);assert.equal(orderMatchesKind({custom_build_id:'build'},'parts'),false);});
 test('Date groups follow Philippine midnight rather than server UTC date',()=>{assert.equal(orderDay('2026-11-14T16:00:00Z'),orderDay('2026-11-15T03:00:00Z'));assert.notEqual(orderDay('2026-11-14T15:59:59Z'),orderDay('2026-11-14T16:00:00Z'));assert.match(orderDateLabel('2026-11-14T16:00:00Z'),/15/);});
+
+test('All includes both regular and custom bike orders',()=>{assert.equal(orderMatchesKind({custom_build_id:null},'all'),true);assert.equal(orderMatchesKind({custom_build_id:'build'},'all'),true);assert.equal(orderMatchesKind({custom_build_id:null},'custom'),false);});

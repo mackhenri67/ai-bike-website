@@ -9,8 +9,9 @@ import {
   missingServiceRoleMessage,
   toFriendlyDbError,
 } from "@/lib/data/admin/errors";
-export const CHECKOUT_SHIPPING_FEE = 190;
+
 export type CreateCustomerOrderInput = {
+  expectedShippingFee: number;
   customerId: string;
   customerName: string;
   customerEmail: string | null;
@@ -109,6 +110,7 @@ export async function createCustomerOrder(
     p_user: user.id,
     p_items: lines,
     p_method: input.paymentMethod,
+    p_expected_shipping: input.expectedShippingFee,
   });
   return {
     data: error ? null : (data as CreateCustomerOrderResult),

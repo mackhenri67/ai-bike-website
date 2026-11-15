@@ -9,7 +9,7 @@ export function GET(request:Request){return returnHttp(async()=>{
   if(error)throw new ReturnError("Apply migration 0024 to manage delivery dates.",503);
   return {orders:data??[],page,total:count??0,hasMore:(page+1)*50<(count??0)};
  }
- const kind=p.get("kind");if(kind&&!["parts","custom"].includes(kind))throw new ReturnError("Invalid order type.");
+ const kind=p.get("kind");if(kind&&!["all","parts","custom"].includes(kind))throw new ReturnError("Invalid order type.");
  const status=p.get("status")??"all";if(status!=="all"&&!Object.hasOwn(RETURN_LABELS,status))throw new ReturnError("Invalid return status.");
  let q=returnClient().from("return_requests").select("*,order:orders!inner(order_number,customer_name,customer_phone,shipping_address,completed_at,custom_build_id,subtotal,discount,order_items(product_name,quantity)),item:order_items(product_name,quantity,line_total,size,color),evidence:return_evidence(id,mime_type,file_name,byte_size),events:return_request_events(status,note,created_at,actor_role)",{count:"exact"}).order("created_at",{ascending:false}).order("id",{ascending:false}).range(page*50,page*50+49);
  if(status!=="all")q=q.eq("status",status);

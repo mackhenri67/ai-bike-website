@@ -11,7 +11,6 @@ import {
   calculateTotal,
   formatCurrency,
   selectedItemCount,
-  SHIPPING_FEE,
 } from "./cart-store";
 import { TrashIcon } from "./icons";
 import styles from "./CartView.module.css";
@@ -21,7 +20,7 @@ import styles from "./CartView.module.css";
  * custom checkboxes / quantity steppers / delete buttons, and an order
  * summary card. All state comes from the shared cart context.
  */
-export default function CartView() {
+export default function CartView({ shippingFee }: { shippingFee: number | null }) {
   const router = useRouter();
   const {
     items,
@@ -44,7 +43,7 @@ export default function CartView() {
   }, [someSelected, allSelected]);
 
   const subtotal = useMemo(() => calculateSubtotal(items), [items]);
-  const total = useMemo(() => calculateTotal(subtotal), [subtotal]);
+  const total = useMemo(() => shippingFee === null ? null : calculateTotal(subtotal, shippingFee), [subtotal, shippingFee]);
   const count = selectedItemCount(items);
 
   const handleCheckout = () => {
@@ -168,12 +167,12 @@ export default function CartView() {
             </div>
             <div className={`${styles.summaryRow} ${styles.shippingRow}`}>
               <span>Shipping fee</span>
-              <span>{formatCurrency(SHIPPING_FEE)}</span>
+              <span>{shippingFee === null ? "Calculated at checkout" : formatCurrency(shippingFee)}</span>
             </div>
             <div className={styles.divider} />
             <div className={`${styles.summaryRow} ${styles.totalRow}`}>
               <span>Total</span>
-              <span>{formatCurrency(total)}</span>
+              <span>{total === null ? "—" : formatCurrency(total)}</span>
             </div>
             <button
               type="button"

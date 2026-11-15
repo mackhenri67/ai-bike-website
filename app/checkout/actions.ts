@@ -1,5 +1,6 @@
 "use server";
 
+import { parseShippingFee } from "@/lib/admin-settings-validation";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateCustomer } from "@/lib/data/customer/customers";
@@ -98,7 +99,10 @@ export async function placeOrder(
     return { error: "Your cart is empty. Add a product before checking out." };
   }
 
+  const expectedShippingFee = parseShippingFee(formData.get("shipping_fee"));
+  if (expectedShippingFee === null) return { error: "Refresh checkout to load the current shipping fee." };
   const result = await createCustomerOrder({
+    expectedShippingFee,
     customerId: customer.id,
     customerName: customer.full_name,
     customerEmail: customer.email,

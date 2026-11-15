@@ -1,3 +1,4 @@
+import { getShippingFee } from "@/lib/data/shipping";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/supabase/server";
 import { getOrCreateCustomer } from "@/lib/data/customer/customers";
@@ -37,6 +38,8 @@ export default async function CheckoutScreen({ direct }: { direct: boolean }) {
     redirect(`/location?next=${encodeURIComponent(checkoutPath)}`);
   }
 
+  const shipping = await getShippingFee();
+  if (shipping.data === null) return <><CustomerHeader /><main className={styles.page}><div className={styles.container}><h1 className={styles.title}>Checkout</h1><p role="alert">{shipping.error}</p></div></main><CustomerFooter /></>;
   return (
     <>
       <CustomerHeader />
@@ -45,6 +48,7 @@ export default async function CheckoutScreen({ direct }: { direct: boolean }) {
           <h1 className={styles.title}>Checkout</h1>
           <CheckoutView key={direct ? "buy-now" : "cart"}
             direct={direct}
+            shippingFee={shipping.data}
             customerName={customer.full_name}
             location={{
               label: location.label,
