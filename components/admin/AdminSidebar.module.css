@@ -1,131 +1,138 @@
 /* ------------------------------------------------------------------
-   Fixed 255px black sidebar — desktop reference (1549 x 886).
+   Fixed 240px admin sidebar. The storefront header uses #111111;
+   keep the admin navigation on that same near-black shade.
    ------------------------------------------------------------------ */
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  width: 255px;
+  width: 240px;
   display: flex;
   flex-direction: column;
-  background: #000000;
-  color: #f3f4f6;
+  background: #111111;
+  color: #b9c0b9;
+  border-right: 1px solid #262626;
   z-index: 50;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
-/* Sidebar must NOT scroll independently under normal desktop conditions;
-   only allow it on very short viewports. */
-@media (max-height: 620px) {
-  .sidebar {
-    overflow-y: auto;
-  }
-}
-
-/* --- Brand -------------------------------------------------------- */
 .brandRow {
   display: flex;
   align-items: center;
-  gap: 17px;
-  height: 76px;
-  padding: 0 20px; /* logo left edge ~x:20 */
+  gap: 12px;
+  height: 100px;
+  padding: 24px;
   flex-shrink: 0;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 17px; /* logo (33px) ends ~x:53, text begins ~x:70 */
+  gap: 12px;
   min-width: 0;
 }
 
 .brandImage {
-  width: 33px;
-  height: 44px;
+  width: 30px;
+  height: 42px;
   object-fit: contain;
 }
 
 .brandText {
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.2px;
   color: #ffffff;
   white-space: nowrap;
 }
 
-/* --- Primary navigation ------------------------------------------- */
+.brandText small {
+  display: block;
+  color: #858f86;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  margin-top: 3px;
+}
+
 .nav {
   display: flex;
   flex-direction: column;
+  padding: 10px 14px;
   gap: 6px;
-  padding: 15px 16px 0 31px; /* icons start ~x:31 */
 }
 
-/* --- Dividers ----------------------------------------------------- */
+.navLabel {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #858585;
+  padding: 0 14px;
+  margin: 0 0 12px;
+}
+
 .divider {
   height: 1px;
   border: 0;
-  background: #1f2937;
+  background: #262626;
   flex-shrink: 0;
 }
 
 .dividerInset {
-  margin: 20px 16px 0; /* ~x:16 to ~x:239 */
+  margin: 18px 24px 0;
 }
 
-/* --- Secondary navigation ----------------------------------------- */
 .secondaryNav {
-  padding: 14px 16px 0 31px;
+  padding: 12px 14px;
 }
 
-/* --- Spacer keeps Log out at the bottom ---------------------------- */
 .spacer {
   flex: 1;
 }
 
-/* --- Log out ------------------------------------------------------- */
 .logoutForm {
   flex-shrink: 0;
+  padding: 16px 14px;
 }
 
 .logoutButton {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
   width: 100%;
-  height: 48px;
-  padding: 0 32px;
+  height: 42px;
+  padding: 0 14px;
   border: 0;
+  border-radius: 8px;
   background: none;
-  color: #d1d5db;
+  color: #a0aaa0;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 20px;
   text-align: left;
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .logoutButton:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: #202020;
   color: #ffffff;
 }
 
-/* --- Mobile: drawer, backdrop and menu button ---------------------- */
-.menuButton {
-  display: none;
-}
-
-.closeButton {
-  display: none;
-}
-
+.menuButton,
+.closeButton,
 .backdrop {
   display: none;
+}
+
+@media (max-height: 620px) {
+  .sidebar {
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 768px) {
@@ -151,17 +158,22 @@
     align-items: center;
     justify-content: center;
     position: fixed;
-    top: 16px;
-    left: 16px;
+    top: 18px;
+    left: 18px;
     z-index: 60;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: 9px;
     background: #ffffff;
     color: #111827;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: none;
     cursor: pointer;
+  }
+
+  .brandRow {
+    height: 90px;
+    padding: 20px;
   }
 
   .closeButton {
@@ -176,11 +188,3 @@
     cursor: pointer;
   }
 }
-
-/* Unified LNR admin design */
-
-.sidebar{width:240px;background:#191d1a;color:#b9c0b9;border-right:1px solid #262d27;overflow-y:auto}
-.brandRow{height:100px;padding:24px}.brand{gap:12px}.brandImage{width:30px;height:42px}.brandText{font-size:14px;font-weight:600;line-height:20px;letter-spacing:-.2px}.brandText small{display:block;color:#858f86;font-size:10px;font-weight:400;letter-spacing:.2px;margin-top:3px}
-.nav{padding:10px 14px;gap:6px}.navLabel{font-size:9px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;color:#758175;padding:0 14px;margin:0 0 12px}
-.secondaryNav{padding:12px 14px}.divider{background:#2d342e}.dividerInset{margin:18px 24px 0}.logoutForm{padding:16px 14px}.logoutButton{height:42px;padding:0 14px;font-size:12px;border-radius:8px;color:#a0aaa0;gap:12px}.logoutButton:hover{background:#252c25}.closeButton{margin-left:auto}
-@media(max-width:768px){.brandRow{padding:20px;height:90px}.menuButton{top:18px;left:18px;width:36px;height:36px;border-radius:9px;box-shadow:none;background:#fff}}

@@ -8,6 +8,9 @@ import type { EventInput, EventStatus } from "@/lib/data/types";
 export async function saveEventAction(input: EventInput): Promise<{ error: string | null }> {
   await requireAdmin();
   if (!input.title.trim()) return { error: "Event title is required." };
+  if (typeof input.category !== "string" || !input.category.trim() || input.category.trim().length > 80) {
+    return { error: "Enter a valid event discipline (maximum 80 characters)." };
+  }
   if (!Array.isArray(input.registration_categories) || input.registration_categories.length < 1 || input.registration_categories.length > 20) {
     return { error: "Add at least one registration category (maximum 20)." };
   }
@@ -28,7 +31,7 @@ export async function saveEventAction(input: EventInput): Promise<{ error: strin
     eventCode: input.event_code ?? null,
     title: input.title,
     slug: input.slug,
-    category: input.category,
+    category: input.category.trim(),
     description: input.description,
     eventDate: input.event_date,
     endDate: null,

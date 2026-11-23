@@ -16,6 +16,7 @@ type EventForm = {
   title: string;
   slug: string;
   category: string;
+  customDiscipline: string;
   description: string;
   location: string;
   organizer: string;
@@ -30,7 +31,7 @@ type ModalState = { mode: "add" } | { mode: "edit"; event: EventRow } | null;
 type EventsManagerProps = { embedded?: boolean; initialEvents: EventRow[]; error?: string | null };
 
 const EMPTY_FORM: EventForm = {
-  title: "", slug: "", category: "Fun Ride", description: "", location: "",
+  title: "", slug: "", category: "Fun Ride", customDiscipline: "", description: "", location: "",
   organizer: "", eventDate: "", price: "0", capacity: "0", bannerImageUrl: "",
   status: "draft", registrationCategories: [{ name: "General Admission", price: "0" }],
 };
@@ -77,8 +78,10 @@ export default function EventsManager({ initialEvents, embedded = false, error: 
   const openEdit = (event: EventRow) => {
     slugEdited.current = true;
     const categories = (event.registration_categories ?? []).map((item) => ({ name: item.name, price: String(item.price) }));
+    const isCustomDiscipline = !CATEGORIES.includes(event.category);
     setForm({
-      title: event.title, slug: event.slug, category: event.category, description: event.description ?? "",
+      title: event.title, slug: event.slug, category: isCustomDiscipline ? "__custom__" : event.category,
+      customDiscipline: isCustomDiscipline ? event.category : "", description: event.description ?? "",
       location: event.location, organizer: event.organizer ?? "", eventDate: event.event_date,
       price: String(event.price ?? 0), capacity: String(event.capacity ?? 0),
       bannerImageUrl: event.banner_image_url ?? "", status: event.status,
@@ -115,8 +118,14 @@ export default function EventsManager({ initialEvents, embedded = false, error: 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true); setFormError(null);
     const registrationCategories = form.registrationCategories.map((item) => ({ name: item.name.trim(), price: Number(item.price) }));
+    const discipline = form.category === "__custom__" ? form.customDiscipline.trim() : form.category;
+    if (!discipline) {
+      setSaving(false);
+      setFormError("Enter a name for the custom discipline.");
+      return;
+    }
     const payload: EventInput = {
-      title: form.title.trim(), slug: form.slug.trim() || slugify(form.title), category: form.category,
+      title: form.title.trim(), slug: form.slug.trim() || slugify(form.title), category: discipline,
       description: form.description.trim() || null, location: form.location.trim(), organizer: form.organizer.trim() || null,
       event_date: form.eventDate, price: registrationCategories[0]?.price ?? (Number(form.price) || 0),
       capacity: Number(form.capacity) || 0, banner_image_url: form.bannerImageUrl || null,
@@ -162,8 +171,9 @@ export default function EventsManager({ initialEvents, embedded = false, error: 
         <label className={styles.label}><span>Event name</span><input className={styles.input} value={form.title} onChange={(e) => handleTitleChange(e.target.value)} placeholder="Sunday Family Fun Ride" required /></label>
         <div className={styles.formRow}>
           <label className={styles.label}><span>Slug</span><input className={styles.input} value={form.slug} onChange={(e) => { slugEdited.current = true; updateField("slug", e.target.value); }} placeholder="sunday-family-fun-ride" /></label>
-          <label className={styles.label}><span>Discipline</span><select className={styles.input} value={form.category} onChange={(e) => updateField("category", e.target.value)}>{CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}</select></label>
+          <label className={styles.label}><span>Discipline</span><select className={styles.input} value={form.category} onChange={(e) => updateField("category", e.target.value)}>{CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}<option value="__custom__">+ Add custom discipline</option></select></label>
         </div>
+        {form.category === "__custom__" ? <label className={styles.label}><span>Custom discipline name</span><input className={styles.input} value={form.customDiscipline} onChange={(e) => updateField("customDiscipline", e.target.value)} placeholder="Enter your own discipline" maxLength={80} required /></label> : null}
         <label className={styles.label}><span>Description</span><textarea className={styles.textarea} value={form.description} onChange={(e) => updateField("description", e.target.value)} rows={3} /></label>
         <div className={styles.formRow}>
           <label className={styles.label}><span>Date</span><input type="datetime-local" className={styles.input} value={form.eventDate} onChange={(e) => updateField("eventDate", e.target.value)} required /></label>
