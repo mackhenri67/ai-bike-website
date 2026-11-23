@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import localFont from "next/font/local";
 import { CartProvider } from "@/components/customer/CartContext";
+import { CustomerAccountProvider } from "@/components/customer/CustomerAccountContext";
 import { getHomepageBanners } from "@/lib/data/banners";
 import { ShopProvider } from "@/components/customer/ShopContext";
 import FloatingCustomerChat from "@/components/chat/FloatingCustomerChat";
@@ -33,9 +34,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       className={`${openSans.variable} ${inter.variable} ${archivo.variable} ${instrumentSans.variable} ${condensed.variable}`}
     >
       <body>
-        <ShopProvider banners={banners}>
-          <CartProvider>{children}<FloatingCustomerChat/></CartProvider>
-        </ShopProvider>
+        <CustomerAccountProvider>
+          <ShopProvider banners={banners}>
+            <CartProvider>
+              {children}
+              <FloatingCustomerChat />
+            </CartProvider>
+          </ShopProvider>
+        </CustomerAccountProvider>
       </body>
     </html>
   );

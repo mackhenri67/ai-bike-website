@@ -1,10 +1,9 @@
 "use client";
 
-import { isAdmin } from "@/lib/auth/roles";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
+import { useCustomerAccount } from "@/components/customer/CustomerAccountContext";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { useCart } from "@/components/customer/CartContext";
 import { saveCustomerCart } from "@/app/cart/actions";
@@ -17,124 +16,14 @@ import {
 } from "./icons";
 import styles from "./AccountMenu.module.css";
 
-type AccountState = {
-  name: string;
-  email: string;
-} | null;
-
-type AccountMenuResponse = {
-  name?: unknown;
-  email?: unknown;
-};
-
-/**
- * Account control for the storefront header.
- *
- * The customer directory is the source of truth for the editable name. The
- * Supabase Auth metadata is used only as a temporary fallback while the
- * authenticated profile endpoint loads.
- */
+/** Storefront account menu backed by the persistent customer account provider. */
 export default function AccountMenu() {
   const router = useRouter();
   const { items } = useCart();
-  const [account, setAccount] = useState<AccountState>(null);
-  const [ready, setReady] = useState(false);
+  const { account, authenticated, ready } = useCustomerAccount();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  /* ---------- Auth listener + current customer name ---------- */
-
-  useEffect(() => {
-    const client = getBrowserClient();
-    let active = true;
-    let changed = false;
-    let requestVersion = 0;
-
-    const toAccount = (user: User | null | undefined): AccountState => {
-      if (!user?.email || isAdmin(user)) return null;
-      const fullName = user.user_metadata?.full_name;
-      return {
-        name:
-          typeof fullName === "string" && fullName.trim()
-            ? fullName.trim()
-            : user.email.split("@")[0],
-        email: user.email,
-      };
-    };
-
-    const loadAccount = async (user: User | null | undefined) => {
-      const request = ++requestVersion;
-      const fallback = toAccount(user);
-      setAccount(fallback);
-      setReady(true);
-      if (!fallback) return;
-
-      try {
-        const response = await fetch("/api/customer/account-menu", {
-          method: "GET",
-          cache: "no-store",
-          headers: { Accept: "application/json" },
-        });
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as AccountMenuResponse;
-        const name =
-          typeof payload.name === "string" ? payload.name.trim() : "";
-        const email =
-          typeof payload.email === "string" && payload.email.trim()
-            ? payload.email.trim()
-            : fallback.email;
-
-        if (active && request === requestVersion && name) {
-          setAccount({ name, email });
-        }
-      } catch {
-        // Keep the Auth metadata fallback when the profile endpoint is offline.
-      }
-    };
-
-    const handleProfileUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<{ name?: unknown }>).detail;
-      const name = typeof detail?.name === "string" ? detail.name.trim() : "";
-      if (!name) return;
-
-      // Prevent an older in-flight profile request from replacing this value.
-      requestVersion += 1;
-      setAccount((current) => (current ? { ...current, name } : current));
-    };
-
-    window.addEventListener("lnr:customer-profile-updated", handleProfileUpdated);
-
-    client.auth
-      .getUser()
-      .then(({ data }: { data: { user: User | null } }) => {
-        if (active && !changed) void loadAccount(data.user);
-      })
-      .catch(() => {
-        if (active) setReady(true);
-      });
-
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange(
-      (event: AuthChangeEvent, session: Session | null) => {
-        if (!active) return;
-        if (event !== "INITIAL_SESSION") changed = true;
-        void loadAccount(session?.user);
-      },
-    );
-
-    return () => {
-      active = false;
-      requestVersion += 1;
-      window.removeEventListener(
-        "lnr:customer-profile-updated",
-        handleProfileUpdated
-      );
-      subscription.unsubscribe();
-    };
-  }, []);
 
   /* ---------- Close on outside click ---------- */
 
@@ -187,21 +76,21 @@ export default function AccountMenu() {
     router.refresh();
   }, [signingOut, items, router]);
 
-  /* ---------- Close dropdown ---------- */
-
   const closeDropdown = () => setOpen(false);
 
   /* ---------- Render ---------- */
 
   if (!ready) {
+    // Keep the account control's space stable while the canonical profile loads.
+    // Do not temporarily display the old Supabase Auth full_name here.
     return (
-      <Link href="/login" className={styles.trigger} aria-label="Account">
+      <span className={styles.trigger} role="status" aria-label="Loading account">
         <UserIcon size={18} />
-      </Link>
+      </span>
     );
   }
 
-  if (!account) {
+  if (!authenticated || !account) {
     return (
       <Link href="/login" className={styles.trigger} aria-label="Sign in">
         <UserIcon size={18} />
@@ -236,34 +125,19 @@ export default function AccountMenu() {
 
         <ul className={styles.menuList}>
           <li className={styles.menuItem}>
-            <Link
-              href="/profile"
-              className={styles.menuLink}
-              role="menuitem"
-              onClick={closeDropdown}
-            >
+            <Link href="/profile" className={styles.menuLink} role="menuitem" onClick={closeDropdown}>
               <UserIcon size={15} className={styles.menuIcon} />
               <span>My Account</span>
             </Link>
           </li>
           <li className={styles.menuItem}>
-            <Link
-              href="/profile?tab=orders"
-              className={styles.menuLink}
-              role="menuitem"
-              onClick={closeDropdown}
-            >
+            <Link href="/profile?tab=orders" className={styles.menuLink} role="menuitem" onClick={closeDropdown}>
               <OrdersIcon size={15} className={styles.menuIcon} />
               <span>My Orders</span>
             </Link>
           </li>
           <li className={styles.menuItem}>
-            <Link
-              href="/my-events"
-              className={styles.menuLink}
-              role="menuitem"
-              onClick={closeDropdown}
-            >
+            <Link href="/my-events" className={styles.menuLink} role="menuitem" onClick={closeDropdown}>
               <EventsIcon size={15} className={styles.menuIcon} />
               <span>My Events</span>
             </Link>
@@ -271,13 +145,7 @@ export default function AccountMenu() {
         </ul>
 
         <div className={styles.logoutSection}>
-          <button
-            type="button"
-            className={styles.logoutLink}
-            role="menuitem"
-            onClick={handleSignOut}
-            disabled={signingOut}
-          >
+          <button type="button" className={styles.logoutLink} role="menuitem" onClick={handleSignOut} disabled={signingOut}>
             <LogOutIcon size={15} className={styles.logoutIcon} />
             <span>{signingOut ? "Signing Out…" : "Log Out"}</span>
           </button>

@@ -1,439 +1,54 @@
-/* ==========================================================================
-   Admin Events manager — table layout matching the design reference.
-   Palette: ink #172033, muted #5f697a, chalk #fff/#f3f4f6. No Tailwind.
-   ========================================================================== */
+/* ========================================================================== Admin Events manager */
+.page{width:100%;max-width:1200px;margin:0 auto}
+.header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-top:10px}
+.title{margin:0;font-size:30px;font-weight:800;line-height:36px;color:#172033}
+.description{margin:4px 0 0;font-size:14px;color:#5f697a}
+.addButton{display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 18px;border:0;border-radius:10px;background:#172033;color:#fff;font-weight:600;font-size:14px;cursor:pointer;transition:background-color .15s ease}
+.addButton:hover{background:#222c44}
+.card{margin-top:28px;border-radius:14px;background:#fff;border:1px solid #e6e9ee;overflow:hidden}
+.tableScroll{overflow-x:auto}.table{width:100%;min-width:860px;border-collapse:collapse;text-align:left;font-size:14px}
+.tableHead{border-bottom:1px solid #e6e9ee;background:#f3f4f6}.th{padding:12px 20px;font-size:12px;font-weight:600;color:#5f697a;white-space:nowrap}.thRight{text-align:right}
+.tableBody{border-top:0}.row{border-bottom:1px solid #eef1f5}.row:last-child{border-bottom:0}
+.td{padding:16px 20px;color:#374151;vertical-align:middle}.eventName{font-size:14px;font-weight:600;color:#172033;text-decoration:none}.eventName:hover{color:#2557d6}
+.eventCity{margin:2px 0 0;font-size:12px;color:#5f697a}.dateCell{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:#4b5563;white-space:nowrap}
+.signupCount{font-weight:600;color:#172033}.signupTotal{color:#5f697a}.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;text-transform:capitalize}
+.badgeDraft{background:#f3f4f6;color:#4b5563}.badgePublished{background:#ecfdf5;color:#047857}.badgeCancelled{background:#fef2f2;color:#b91c1c}
+.actions{display:flex;justify-content:flex-end;gap:4px}.iconButton{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid transparent;border-radius:9px;background:#fff;cursor:pointer;transition:background-color .15s ease}
+.editButton{color:#172033}.editButton:hover{background:#eef1f5}.dangerButton{color:#b91c1c}.dangerButton:hover{background:#fef2f2}
+.empty{padding:48px 20px;text-align:center;font-size:14px;color:#5f697a}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:60;overflow-y:auto}
+.modal{width:100%;max-width:640px;background:#fff;border-radius:16px;padding:22px 24px 24px}.modalHeader{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modalTitle{font-size:19px;font-weight:800;margin:0;color:#172033}.modalDescription{margin:8px 0 0;font-size:14px;line-height:1.5;color:#4b5563}
+.modalClose{border:0;background:#f3f4f6;border-radius:9px;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#374151}
+.form{display:flex;flex-direction:column;gap:14px}.formRow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151}
+.input,.textarea{height:42px;border:1px solid #d1d5db;border-radius:9px;padding:0 12px;font-size:14px;font-family:inherit;background:#fff;color:#172033}
+.textarea{height:auto;padding:10px 12px;resize:vertical}.input:focus,.textarea:focus{outline:2px solid #172033;outline-offset:1px}
+.uploadBlock{display:flex;flex-direction:column;gap:8px}.uploadLabel{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;border:1px dashed #cbd2dc;border-radius:10px;padding:12px 16px;font-size:13px;font-weight:600;color:#4b5563;background:#f9fafb;cursor:pointer}
+.hiddenFile{display:none}.bannerPreview{display:flex;align-items:center;gap:12px}.removeImage{border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer}
+.error{border:1px solid #fecaca;background:#fef2f2;color:#b91c1c;border-radius:10px;padding:12px 14px;font-size:13px}
+.modalActions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}.cancelButton{height:44px;padding:0 18px;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#374151;font-weight:600;font-size:14px;cursor:pointer}
+.saveButton{height:44px;padding:0 22px;border:0;border-radius:10px;background:#172033;color:#fff;font-weight:700;font-size:14px;cursor:pointer}.saveButton:disabled{opacity:.6;cursor:progress}
+.dangerButtonSolid{height:44px;padding:0 22px;border:0;border-radius:10px;background:#b91c1c;color:#fff;font-weight:700;font-size:14px;cursor:pointer}.dangerButtonSolid:disabled{opacity:.6;cursor:progress}
 
-.page {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 10px; /* breathing room so the New event button isn't flush with the top */
-}
-
-.title {
-  margin: 0;
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 36px;
-  color: #172033;
-}
-
-.description {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: #5f697a;
-}
-
-.addButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 42px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 10px;
-  background: #172033;
-  color: #fff;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.addButton:hover {
-  background: #222c44;
-}
-
-.card {
-  margin-top: 28px;
-  border-radius: 14px;
-  background: #ffffff;
-  border: 1px solid #e6e9ee;
-  overflow: hidden;
-}
-
-.tableScroll {
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  min-width: 860px;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 14px;
-}
-
-.tableHead {
-  border-bottom: 1px solid #e6e9ee;
-  background: #f3f4f6;
-}
-
-.th {
-  padding: 12px 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #5f697a;
-  white-space: nowrap;
-}
-
-.thRight {
-  text-align: right;
-}
-
-.tableBody {
-  border-top: 0;
-}
-
-.row {
-  border-bottom: 1px solid #eef1f5;
-}
-
-.row:last-child {
-  border-bottom: 0;
-}
-
-.td {
-  padding: 16px 20px;
-  color: #374151;
-  vertical-align: middle;
-}
-
-.eventName {
-  font-size: 14px;
-  font-weight: 600;
-  color: #172033;
-  text-decoration: none;
-}
-
-.eventName:hover {
-  color: #2557d6;
-}
-
-.eventCity {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: #5f697a;
-}
-
-.dateCell {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  color: #4b5563;
-  white-space: nowrap;
-}
-
-.signupCount {
-  font-weight: 600;
-  color: #172033;
-}
-
-.signupTotal {
-  color: #5f697a;
-}
-
-.badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.badgeDraft {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.badgePublished {
-  background: #ecfdf5;
-  color: #047857;
-}
-
-.badgeCancelled {
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.iconButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  background: #fff;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.editButton {
-  color: #172033;
-}
-
-.editButton:hover {
-  background: #eef1f5;
-}
-
-.dangerButton {
-  color: #b91c1c;
-}
-
-.dangerButton:hover {
-  background: #fef2f2;
-}
-
-.empty {
-  padding: 48px 20px;
-  text-align: center;
-  font-size: 14px;
-  color: #5f697a;
-}
-
-/* Modal shared */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 40px 16px;
-  z-index: 60;
-  overflow-y: auto;
-}
-
-.modal {
-  width: 100%;
-  max-width: 640px;
-  background: #fff;
-  border-radius: 16px;
-  padding: 22px 24px 24px;
-}
-
-.modalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.modalTitle {
-  font-size: 19px;
-  font-weight: 800;
-  margin: 0;
-  color: #172033;
-}
-
-.modalDescription {
-  margin: 8px 0 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #4b5563;
-}
-
-.modalClose {
-  border: 0;
-  background: #f3f4f6;
-  border-radius: 9px;
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #374151;
-}
-
-/* Form */
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.formRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.input,
-.textarea {
-  height: 42px;
-  border: 1px solid #d1d5db;
-  border-radius: 9px;
-  padding: 0 12px;
-  font-size: 14px;
-  font-family: inherit;
-  background: #fff;
-  color: #172033;
-}
-
-.textarea {
-  height: auto;
-  padding: 10px 12px;
-  resize: vertical;
-}
-
-.input:focus,
-.textarea:focus {
-  outline: 2px solid #172033;
-  outline-offset: 1px;
-}
-
-.uploadBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.uploadLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  align-self: flex-start;
-  border: 1px dashed #cbd2dc;
-  border-radius: 10px;
-  padding: 12px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #4b5563;
-  background: #f9fafb;
-  cursor: pointer;
-}
-
-.hiddenFile {
-  display: none;
-}
-
-.bannerPreview {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.removeImage {
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 7px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.error {
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
-  border-radius: 10px;
-  padding: 12px 14px;
-  font-size: 13px;
-}
-
-.modalActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 6px;
-}
-
-.cancelButton {
-  height: 44px;
-  padding: 0 18px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  background: #fff;
-  color: #374151;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.saveButton {
-  height: 44px;
-  padding: 0 22px;
-  border: 0;
-  border-radius: 10px;
-  background: #172033;
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.saveButton:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-.dangerButtonSolid {
-  height: 44px;
-  padding: 0 22px;
-  border: 0;
-  border-radius: 10px;
-  background: #b91c1c;
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.dangerButtonSolid:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-@media (max-width: 560px) {
-  .formRow {
-    grid-template-columns: 1fr;
-  }
-}
 /* Unified LNR admin design */
-.card{border-color:#e5e8e3;border-radius:12px;box-shadow:0 2px 6px #24332203;background:#fff;}
-.card{margin-top:24px;}
-.header,.modalHeader{gap:16px;}
-.tableScroll{overflow-x:auto;}
-.table{min-width:680px;}
-.addButton,.saveButton{background:#edcd58;color:#242b22;border:1px solid #e3c248;border-radius:8px;font-size:12px;font-weight:600;min-height:38px;box-shadow:0 1px 2px #866f1610;}
-.addButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
-.saveButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
-.cancelButton{border-radius:8px;font-size:12px;}
-.iconButton{border-radius:8px;min-width:32px;min-height:32px;}
-.editButton{background:#f5f6f0;color:#68724f;border-color:#e1e5d7;}
-.overlay{padding:24px 16px;align-items:center;background:#19201980;backdrop-filter:blur(3px);}
-.modal{border:1px solid #e4e8e0;border-radius:16px;box-shadow:0 24px 90px #15230f30;max-height:calc(100dvh - 48px);overflow-y:auto;}
-.modalTitle{font-size:20px;font-weight:600;letter-spacing:-.5px;color:#273025;}
-.modalHeader,.modalActions{border-color:#e9ede7;}
-.input,.textarea{border-radius:8px;border-color:#dfe4dc;}
-.label{font-size:12px;font-weight:550;color:#5a6556;}
-.badge{font-size:10px;font-weight:600;padding:4px 9px;letter-spacing:.1px;border-radius:6px;}
-.empty{padding:52px 24px;color:#8a9286;font-size:13px;}
-.page{max-width:none}
+.card{border-color:#e5e8e3;border-radius:12px;box-shadow:0 2px 6px #24332203;background:#fff;margin-top:24px}
+.header,.modalHeader{gap:16px}.tableScroll{overflow-x:auto}.table{min-width:680px}
+.addButton,.saveButton{background:#edcd58;color:#242b22;border:1px solid #e3c248;border-radius:8px;font-size:12px;font-weight:600;min-height:38px;box-shadow:0 1px 2px #866f1610}
+.addButton:hover:not(:disabled),.saveButton:hover:not(:disabled){background:#dfbd42;color:#242b22}.cancelButton{border-radius:8px;font-size:12px}
+.iconButton{border-radius:8px;min-width:32px;min-height:32px}.editButton{background:#f5f6f0;color:#68724f;border-color:#e1e5d7}
+.overlay{padding:24px 16px;align-items:center;background:#19201980;backdrop-filter:blur(3px)}
+.modal{border:1px solid #e4e8e0;border-radius:16px;box-shadow:0 24px 90px #15230f30;max-height:calc(100dvh - 48px);overflow-y:auto}
+.modalTitle{font-size:20px;font-weight:600;letter-spacing:-.5px;color:#273025}.modalHeader,.modalActions{border-color:#e9ede7}
+.input,.textarea{border-radius:8px;border-color:#dfe4dc}.label{font-size:12px;font-weight:550;color:#5a6556}
+.badge{font-size:10px;font-weight:600;padding:4px 9px;letter-spacing:.1px;border-radius:6px}.empty{padding:52px 24px;color:#8a9286;font-size:13px}.page{max-width:none}
+
+/* Registration ticket categories and individual fees */
+.registrationCategories{display:flex;flex-direction:column;gap:12px;padding:14px;border:1px solid #e5e8e3;border-radius:10px;background:#fafbf8}
+.registrationCategoriesHeader{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.registrationCategoriesHeader strong{font-size:13px;color:#273025}.registrationCategoriesHeader p{margin:4px 0 0;font-size:12px;font-weight:400;color:#788071}
+.categoryRow{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.55fr) auto;gap:10px;align-items:end;padding-top:10px;border-top:1px solid #e9ede7}
+.addCategoryButton,.removeCategoryButton{min-height:36px;border:1px solid #dfe4dc;border-radius:8px;padding:0 11px;background:#fff;color:#374151;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.addCategoryButton{background:#f4f6ed;color:#4d5b3e;border-color:#dce3d0}.removeCategoryButton{margin-bottom:1px;color:#a33;border-color:#f0d5d5}
+.removeCategoryButton:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:560px){.formRow{grid-template-columns:1fr}.categoryRow{grid-template-columns:1fr 1fr}.removeCategoryButton{grid-column:1/-1;justify-self:start}}

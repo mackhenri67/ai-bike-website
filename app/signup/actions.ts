@@ -14,6 +14,7 @@ export type SignUpState = {
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_ACCEPTED_GPS_ACCURACY_METERS = 150;
 
 /**
  * Server Action: creates a customer account and saves their delivery
@@ -44,6 +45,8 @@ export async function customerSignUp(
   const address = String(formData.get("address") ?? "").trim();
   const latitude = Number(formData.get("latitude") ?? NaN);
   const longitude = Number(formData.get("longitude") ?? NaN);
+  const rawLocationAccuracy = String(formData.get("locationAccuracy") ?? "").trim();
+  const locationAccuracy = rawLocationAccuracy ? Number(rawLocationAccuracy) : null;
 
   if (!fullName)
     return {
@@ -75,6 +78,27 @@ export async function customerSignUp(
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return {
       error: "Please set and confirm your delivery location.",
+      needsEmailConfirmation: false,
+      message: null,
+    };
+  }
+
+  // Match the saved-location update flow: a coarse browser/IP location must
+  // not be silently saved as the customer's exact delivery address. A pin
+  // placed manually on the map has an empty accuracy field and remains valid.
+  if (
+    locationAccuracy !== null &&
+    (!Number.isFinite(locationAccuracy) || locationAccuracy < 0)
+  ) {
+    return {
+      error: "The detected location accuracy is invalid. Please try locating again or place the pin manually.",
+      needsEmailConfirmation: false,
+      message: null,
+    };
+  }
+  if (locationAccuracy !== null && locationAccuracy > MAX_ACCEPTED_GPS_ACCURACY_METERS) {
+    return {
+      error: `Your device only found an approximate location (±${Math.round(locationAccuracy)} m). Please enable device Location Services and try again outdoors, or search for your address and place the pin on your exact delivery spot.`,
       needsEmailConfirmation: false,
       message: null,
     };
