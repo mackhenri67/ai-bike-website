@@ -59,7 +59,7 @@ export default function CustomerFooter() {
         <div className={styles.column}>
           <p className={styles.follow}>Follow Us</p>
           <a
-            href="https://www.facebook.com/"
+            href="https://www.facebook.com/p/LnR-Cycle-center-100063694245362/"
             target="_blank"
             rel="noreferrer"
             className={styles.socialLink}

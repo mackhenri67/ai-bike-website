@@ -9,7 +9,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   FacebookIcon,
-  InstagramIcon,
   WrenchIcon,
 } from "./icons";
 import styles from "./HeroCarousel.module.css";
@@ -111,22 +110,13 @@ export default function HeroCarousel() {
 
         <div className={styles.socials}>
           <a
-            href="https://www.facebook.com/"
+            href="https://www.facebook.com/p/LnR-Cycle-center-100063694245362/"
             target="_blank"
             rel="noreferrer"
             className={styles.social}
             aria-label="LNR Cycle Center on Facebook"
           >
             <FacebookIcon size={15} />
-          </a>
-          <a
-            href="https://www.instagram.com/"
-            target="_blank"
-            rel="noreferrer"
-            className={styles.social}
-            aria-label="LNR Cycle Center on Instagram"
-          >
-            <InstagramIcon size={15} />
           </a>
         </div>
       </div>
