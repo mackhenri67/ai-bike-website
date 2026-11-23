@@ -26,7 +26,7 @@ export default function CustomerReviewsCarousel({ reviews }: { reviews: Review[]
     <section className={styles.section} aria-labelledby="customer-reviews-heading">
       <div className={styles.container}>
         <div className={styles.titleRow}>
-          <h2 id="customer-reviews-heading">See what our customers are saying</h2>
+          <h2 id="customer-reviews-heading">See what our customers are saying ...</h2>
           {reviews.length > 1 ? (
             <div className={styles.controls} aria-label="Review navigation">
               <span className={styles.counter}>{index + 1} / {reviews.length}</span>
