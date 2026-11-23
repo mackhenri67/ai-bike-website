@@ -20,16 +20,17 @@ export type LocationPickerProps = {
 };
 
 const GEOLOCATION_DENIED_MESSAGE =
-  "Location access was denied. Please allow location access in your browser, or search for your address and place the pin manually.";
+  "Location access was denied. Allow location access for this site in your browser or device settings, then try again.";
 
 const GEOLOCATION_UNAVAILABLE_MESSAGE =
-  "We couldn't get a reliable GPS location. Please try again outdoors or search for your address and place the pin manually.";
+  "Your device could not determine a location. Turn on Location Services/GPS, check your browser permission, and try again outdoors.";
+
+const GEOLOCATION_TIMEOUT_MESSAGE =
+  "Your location request timed out. Keep Location Services/GPS on, allow this site to use your location, and try again.";
 
 const POOR_ACCURACY_METERS = 150;
 const GOOD_ACCURACY_METERS = 50;
-const MAX_FIX_ATTEMPTS = 4;
-const FIX_RETRY_DELAY_MS = 2000;
-const FIX_TIMEOUT_MS = 10000;
+const FIX_WATCH_WINDOW_MS = 25000;
 
 // Fallback map center before the user chooses a location.
 const DEFAULT_CENTER: [number, number] = [14.5995, 120.9842];
@@ -97,6 +98,7 @@ export default function LocationPicker({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ latitude: lat, longitude: lng }),
+        cache: "no-store",
       });
 
       const payload = (await response.json()) as {
@@ -106,11 +108,15 @@ export default function LocationPicker({
 
       if (response.ok && payload.address) {
         setAddress(payload.address);
+      } else {
+        setStatus(
+          "Your map pin is set, but the street address could not be matched automatically. Please type your full delivery address below."
+        );
       }
     } catch {
       // Keep the address editable if reverse geocoding fails.
       setStatus(
-        "Couldn't auto-detect the address for this spot — please type your full delivery address below."
+        "Your map pin is set, but the address lookup failed. Please type your full delivery address below."
       );
     } finally {
       setResolvingAddress(false);
@@ -157,26 +163,91 @@ export default function LocationPicker({
     }
   };
 
-  const getPosition = () =>
-    new Promise<GeolocationPosition>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => resolve(position),
-        (error) => reject(error),
-        {
-          enableHighAccuracy: true,
-          timeout: FIX_TIMEOUT_MS,
-          maximumAge: 0,
-        }
-      );
-    });
+  const isPermissionDenied = (geoError: unknown): boolean =>
+    geoError !== null &&
+    typeof geoError === "object" &&
+    "code" in geoError &&
+    (geoError as { code?: unknown }).code === 1;
 
-  const isPermissionDenied = (error: unknown): boolean =>
-    error instanceof GeolocationPositionError
-      ? error.code === GeolocationPositionError.PERMISSION_DENIED
-      : error !== null &&
-        typeof error === "object" &&
-        "code" in error &&
-        (error as { code?: unknown }).code === 1;
+  const getGeolocationErrorMessage = (geoError: unknown): string => {
+    if (isPermissionDenied(geoError)) return GEOLOCATION_DENIED_MESSAGE;
+
+    const code =
+      geoError !== null && typeof geoError === "object" && "code" in geoError
+        ? (geoError as { code?: unknown }).code
+        : null;
+
+    if (code === 3) return GEOLOCATION_TIMEOUT_MESSAGE;
+    if (code === 2) return GEOLOCATION_UNAVAILABLE_MESSAGE;
+    return GEOLOCATION_UNAVAILABLE_MESSAGE;
+  };
+
+  /**
+   * Keep a browser location watch open briefly so the device can improve an
+   * initial coarse Wi-Fi/cell fix with a better GPS fix. Resolve with the best
+   * accuracy reading seen, or fail with the browser's last location error.
+   */
+  const getBestPosition = () =>
+    new Promise<GeolocationPosition>((resolve, reject) => {
+      let best: GeolocationPosition | null = null;
+      let lastError: GeolocationPositionError | null = null;
+      let settled = false;
+      let watchId: number | undefined;
+      let timeoutId: number | undefined;
+
+      const finish = (fallbackError?: unknown) => {
+        if (settled) return;
+        settled = true;
+
+        if (watchId !== undefined) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+        if (timeoutId !== undefined) {
+          window.clearTimeout(timeoutId);
+        }
+
+        if (best) {
+          resolve(best);
+        } else {
+          reject(fallbackError ?? lastError ?? new Error("Location unavailable"));
+        }
+      };
+
+      try {
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            if (
+              !best ||
+              position.coords.accuracy < best.coords.accuracy
+            ) {
+              best = position;
+            }
+
+            // Stop as soon as the device reports a reasonably precise fix.
+            if (position.coords.accuracy <= GOOD_ACCURACY_METERS) {
+              finish();
+            }
+          },
+          (geoError) => {
+            lastError = geoError;
+            // Permission denial cannot improve by waiting or retrying.
+            if (isPermissionDenied(geoError)) finish(geoError);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: FIX_WATCH_WINDOW_MS,
+            maximumAge: 0,
+          }
+        );
+      } catch (geoError) {
+        finish(geoError);
+        return;
+      }
+
+      timeoutId = window.setTimeout(() => {
+        finish(lastError ?? new Error("Location request timed out"));
+      }, FIX_WATCH_WINDOW_MS + 1000);
+    });
 
   const useCurrentLocation = async () => {
     setError(null);
@@ -187,60 +258,31 @@ export default function LocationPicker({
       return;
     }
 
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setError(
+        "Browser location requires a secure connection. Open the store using its HTTPS address and try again."
+      );
+      return;
+    }
+
     setLocating(true);
-    setStatus("Acquiring a precise location — this can take a few seconds…");
+    setStatus(
+      "Finding your location… Keep this page open while your device refines the GPS reading."
+    );
 
-    // The FIRST browser fix is usually the coarsest (WiFi/cell based). Ask a
-    // few times and keep the best fix so the pin lands on the GPS lock rather
-    // than the initial coarse estimate.
-    let best: GeolocationPosition | null = null;
-
-    for (let attempt = 0; attempt < MAX_FIX_ATTEMPTS; attempt++) {
+    let best: GeolocationPosition;
+    try {
+      best = await getBestPosition();
+    } catch (geoError) {
       if (!mountedRef.current) return;
-
-      if (attempt > 0) {
-        setStatus(
-          `Refining location… (attempt ${attempt + 1} of ${MAX_FIX_ATTEMPTS})`
-        );
-      }
-
-      let position: GeolocationPosition;
-      try {
-        position = await getPosition();
-      } catch (geoError) {
-        if (isPermissionDenied(geoError)) {
-          setError(GEOLOCATION_DENIED_MESSAGE);
-          setLocating(false);
-          return;
-        }
-        // Non-fatal — keep refining until the attempts run out.
-        continue;
-      }
-
-      const accuracy = Math.round(position.coords.accuracy);
-
-      if (!best || accuracy < Math.round(best.coords.accuracy)) {
-        best = position;
-      }
-
-      // Good enough for delivery — stop refining.
-      if (accuracy <= GOOD_ACCURACY_METERS) break;
-
-      // Give the GPS receiver a moment to lock in before the next attempt.
-      await new Promise((resolve) => setTimeout(resolve, FIX_RETRY_DELAY_MS));
+      setLocating(false);
+      setError(getGeolocationErrorMessage(geoError));
+      return;
     }
 
     if (!mountedRef.current) return;
 
     setLocating(false);
-
-    if (!best) {
-      // Important: do NOT silently fall back to a low-accuracy network
-      // location. For delivery, a wrong location is worse than asking the
-      // customer to place the pin manually.
-      setError(GEOLOCATION_UNAVAILABLE_MESSAGE);
-      return;
-    }
 
     const lat = best.coords.latitude;
     const lng = best.coords.longitude;
@@ -253,12 +295,12 @@ export default function LocationPicker({
     if (accuracy > POOR_ACCURACY_METERS) {
       setStatus(
         `Best location found is still only about ±${accuracy} m. ` +
-          "Please move the pin to your exact delivery spot before saving."
+          "This is an approximate device reading. Please drag the pin to your exact delivery spot before saving."
       );
     } else if (accuracy > GOOD_ACCURACY_METERS) {
       setStatus(
         `Best location found (±${accuracy} m). ` +
-          "Please review the pin and move it if needed before saving."
+          "Review the pin and move it if needed before saving."
       );
     } else {
       setStatus(
@@ -267,7 +309,7 @@ export default function LocationPicker({
       );
     }
 
-    // Resolve the address after the pin is placed.
+    // Resolve the street address after the best available pin is placed.
     void reverseGeocode(lat, lng);
   };
 
@@ -288,6 +330,7 @@ export default function LocationPicker({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: query }),
+        cache: "no-store",
       });
 
       const payload = (await response.json()) as {
@@ -388,7 +431,7 @@ export default function LocationPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keeps the location-refinement loop from updating state after unmount.
+  // Keeps async callbacks from updating state after unmount.
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -410,7 +453,7 @@ export default function LocationPicker({
       <input type="hidden" name="address" value={address} />
       <input type="hidden" name="label" value={label} />
 
-      {/* Useful for server-side validation when the coordinates came from GPS.
+      {/* Useful for server-side validation when coordinates came from GPS.
           Manual map selection intentionally sends an empty value. */}
       <input
         type="hidden"
@@ -423,6 +466,7 @@ export default function LocationPicker({
         className={styles.locateButton}
         onClick={useCurrentLocation}
         disabled={locating}
+        aria-busy={locating}
       >
         <MapPinIcon size={16} />
         {locating ? "Getting your precise location…" : "Use my current location"}

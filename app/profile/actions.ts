@@ -11,6 +11,8 @@ import {
 export type ProfileState = {
   error: string | null;
   success: boolean;
+  /** Saved name lets the client header update immediately after the action. */
+  fullName?: string;
 };
 
 /**
@@ -62,7 +64,7 @@ export async function updateProfile(
   }
 
   revalidatePath("/profile");
-  return { error: null, success: true };
+  return { error: null, success: true, fullName };
 }
 
 /**

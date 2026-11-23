@@ -9,14 +9,15 @@ import { NextRequest, NextResponse } from "next/server";
  * Reverse:
  *   { "latitude": 14.5995, "longitude": 120.9842 }
  *
- * Nominatim is used server-side so the request has a meaningful User-Agent.
+ * Nominatim is used server-side so the request has an application-identifying
+ * User-Agent and Referer. Requests are only made in response to user actions.
  */
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org";
-
-// Replace this with your real project/store contact email before deployment.
-const USER_AGENT =
-  "LnRCycleCenter-Capstone/1.0 (contact: your-real-email@example.com)";
+const SITE_ORIGIN = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://lnr-cycle-center.vercel.app"
+).replace(/\/+$/, "");
+const USER_AGENT = `LnRCycleCenter/1.1 (${SITE_ORIGIN})`;
 
 type GeocodeResponse = {
   latitude: number;
@@ -94,17 +95,19 @@ async function forwardGeocode(address: string): Promise<NextResponse> {
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("addressdetails", "1");
   url.searchParams.set("limit", "5");
-  // Constrain lookups to the Philippines. Without this, common names (e.g.
-  // "San Jose", "Labanon") resolve to foreign places first, so the search
-  // pin lands in the wrong country instead of the customer's town/barangay.
+  // Constrain lookups to the Philippines. Without this, common names can
+  // resolve to foreign places before the customer's town/barangay.
   url.searchParams.set("countrycodes", "ph");
 
   const response = await fetch(url, {
     headers: {
       "User-Agent": USER_AGENT,
+      Referer: `${SITE_ORIGIN}/`,
       Accept: "application/json",
     },
-    cache: "no-store",
+    // Cache identical user-triggered lookups for a day to reduce load on the
+    // public Nominatim service and comply with its caching guidance.
+    next: { revalidate: 86400 },
   });
 
   if (!response.ok) {
@@ -131,11 +134,7 @@ async function forwardGeocode(address: string): Promise<NextResponse> {
     );
   }
 
-  // The client currently expects one coordinate pair. We return the best
-  // Nominatim result, but request multiple candidates so the lookup has more
-  // context and can be extended to a result-selection UI later.
   const best = results[0];
-
   const latitude = Number(best.lat);
   const longitude = Number(best.lon);
 
@@ -172,9 +171,12 @@ async function reverseGeocode(
   const response = await fetch(url, {
     headers: {
       "User-Agent": USER_AGENT,
+      Referer: `${SITE_ORIGIN}/`,
       Accept: "application/json",
     },
-    cache: "no-store",
+    // Cache identical user-triggered lookups for a day to reduce load on the
+    // public Nominatim service and comply with its caching guidance.
+    next: { revalidate: 86400 },
   });
 
   if (!response.ok) {
@@ -183,7 +185,7 @@ async function reverseGeocode(
     return NextResponse.json(
       {
         error:
-          "The location lookup service is unavailable. Please try again later.",
+          "The location lookup service is unavailable. Please type your full delivery address.",
       },
       { status: 502 }
     );

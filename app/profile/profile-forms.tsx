@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { updateProfile } from "./actions";
 import styles from "./page.module.css";
 
@@ -18,6 +18,16 @@ export default function ProfileForms({ initial }: ProfileFormsProps) {
     error: null,
     success: false,
   });
+
+  // Notify the persistent storefront header after the database update succeeds.
+  useEffect(() => {
+    if (!state.success || !state.fullName) return;
+    window.dispatchEvent(
+      new CustomEvent("lnr:customer-profile-updated", {
+        detail: { name: state.fullName },
+      })
+    );
+  }, [state.success, state.fullName]);
 
   return (
     <form action={formAction} noValidate className={styles.profileForm}>
@@ -49,7 +59,9 @@ export default function ProfileForms({ initial }: ProfileFormsProps) {
           disabled
           className={`${styles.input} ${styles.readOnly}`}
         />
-        <p className={styles.hint}>Your email is tied to your account and can&apos;t be changed here.</p>
+        <p className={styles.hint}>
+          Your email is tied to your account and can&apos;t be changed here.
+        </p>
       </div>
 
       <div className={styles.field}>

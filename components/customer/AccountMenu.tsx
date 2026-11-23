@@ -22,14 +22,17 @@ type AccountState = {
   email: string;
 } | null;
 
+type AccountMenuResponse = {
+  name?: unknown;
+  email?: unknown;
+};
+
 /**
  * Account control for the storefront header.
  *
- * Signed-out visitors see a user icon linking to /login.
- * Signed-in customers see a trigger (icon + name + chevron) that opens a
- * dropdown with: customer info, My Account, My Orders, My Events, and
- * Log Out. The dropdown closes on outside click, Escape key, or after an
- * action. Sign-out persists the cart before clearing the session.
+ * The customer directory is the source of truth for the editable name. The
+ * Supabase Auth metadata is used only as a temporary fallback while the
+ * authenticated profile endpoint loads.
  */
 export default function AccountMenu() {
   const router = useRouter();
@@ -40,12 +43,14 @@ export default function AccountMenu() {
   const [signingOut, setSigningOut] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  /* ---------- Auth listener ---------- */
+  /* ---------- Auth listener + current customer name ---------- */
 
   useEffect(() => {
     const client = getBrowserClient();
     let active = true;
     let changed = false;
+    let requestVersion = 0;
+
     const toAccount = (user: User | null | undefined): AccountState => {
       if (!user?.email || isAdmin(user)) return null;
       const fullName = user.user_metadata?.full_name;
@@ -57,29 +62,76 @@ export default function AccountMenu() {
         email: user.email,
       };
     };
+
+    const loadAccount = async (user: User | null | undefined) => {
+      const request = ++requestVersion;
+      const fallback = toAccount(user);
+      setAccount(fallback);
+      setReady(true);
+      if (!fallback) return;
+
+      try {
+        const response = await fetch("/api/customer/account-menu", {
+          method: "GET",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as AccountMenuResponse;
+        const name =
+          typeof payload.name === "string" ? payload.name.trim() : "";
+        const email =
+          typeof payload.email === "string" && payload.email.trim()
+            ? payload.email.trim()
+            : fallback.email;
+
+        if (active && request === requestVersion && name) {
+          setAccount({ name, email });
+        }
+      } catch {
+        // Keep the Auth metadata fallback when the profile endpoint is offline.
+      }
+    };
+
+    const handleProfileUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ name?: unknown }>).detail;
+      const name = typeof detail?.name === "string" ? detail.name.trim() : "";
+      if (!name) return;
+
+      // Prevent an older in-flight profile request from replacing this value.
+      requestVersion += 1;
+      setAccount((current) => (current ? { ...current, name } : current));
+    };
+
+    window.addEventListener("lnr:customer-profile-updated", handleProfileUpdated);
+
     client.auth
       .getUser()
       .then(({ data }: { data: { user: User | null } }) => {
-        if (active && !changed) {
-          setAccount(toAccount(data.user));
-          setReady(true);
-        }
+        if (active && !changed) void loadAccount(data.user);
       })
       .catch(() => {
         if (active) setReady(true);
       });
+
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange(
       (event: AuthChangeEvent, session: Session | null) => {
         if (!active) return;
         if (event !== "INITIAL_SESSION") changed = true;
-        setAccount(toAccount(session?.user));
-        setReady(true);
+        void loadAccount(session?.user);
       },
     );
+
     return () => {
       active = false;
+      requestVersion += 1;
+      window.removeEventListener(
+        "lnr:customer-profile-updated",
+        handleProfileUpdated
+      );
       subscription.unsubscribe();
     };
   }, []);
@@ -227,7 +279,7 @@ export default function AccountMenu() {
             disabled={signingOut}
           >
             <LogOutIcon size={15} className={styles.logoutIcon} />
-            <span>{signingOut ? "Signing Out\u2026" : "Log Out"}</span>
+            <span>{signingOut ? "Signing Out…" : "Log Out"}</span>
           </button>
         </div>
       </div>
