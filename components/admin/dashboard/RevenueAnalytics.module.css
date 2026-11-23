@@ -1,21 +1,20 @@
 .analytics {
-  margin-top: 16px; /* 16px below the statistics cards */
+  margin-top: 16px;
   display: flex;
   flex-direction: column;
   background: #ffffff;
   border: 1px solid #e1e5ea;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-  padding: 18px 24px 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px #24332203;
+  padding: 24px;
 }
-
-/* --- Header row ----------------------------------------------------------- */
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   min-height: 39px;
+  gap: 16px;
 }
 
 .title {
@@ -28,7 +27,7 @@
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
 }
 
 .printButton {
@@ -51,8 +50,6 @@
   color: #172033;
 }
 
-/* --- Date range dropdown --------------------------------------------------- */
-
 .dropdown {
   position: relative;
 }
@@ -73,6 +70,10 @@
   color: #273247;
   cursor: pointer;
   transition: border-color 0.15s ease;
+}
+
+.metricTrigger {
+  width: 158px;
 }
 
 .dropdownTrigger:hover {
@@ -106,7 +107,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  height: 36px;
+  min-height: 36px;
   padding: 0 16px;
   border: none;
   border-radius: 6px;
@@ -123,11 +124,9 @@
 }
 
 .optionActive {
-  color: #3b82f6;
-  font-weight: 500;
+  color: #8c7525;
+  font-weight: 600;
 }
-
-/* --- Chart ---------------------------------------------------------------- */
 
 .chart {
   display: flex;
@@ -205,7 +204,7 @@
 .bar {
   position: relative;
   width: 100%;
-  background: #3b82f6;
+  background: #ddc265;
   border-radius: 4px 4px 0 0;
 }
 
@@ -237,8 +236,6 @@
   text-align: center;
 }
 
-/* --- Footer ---------------------------------------------------------------- */
-
 .footer {
   display: flex;
   align-items: center;
@@ -266,7 +263,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 39px;
+  min-height: 39px;
   padding: 0 18px;
   border-radius: 8px;
   font-size: 12px;
@@ -289,15 +286,16 @@
 
 .primaryButton {
   min-width: 145px;
-  background: #3b82f6;
-  border: 1px solid #3b82f6;
-  color: #ffffff;
-  font-weight: 500;
+  background: #edcd58;
+  border: 1px solid #e3c248;
+  color: #242b22;
+  font-weight: 600;
+  box-shadow: 0 1px 2px #866f1610;
 }
 
-.primaryButton:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+.primaryButton:hover:not(:disabled) {
+  background: #dfbd42;
+  color: #242b22;
 }
 
 @media (max-width: 1100px) {
@@ -310,17 +308,29 @@
   }
 }
 
+@media (max-width: 760px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerActions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .metricTrigger {
+    width: 158px;
+  }
+}
+
 @media (max-width: 640px) {
   .footer {
     flex-wrap: wrap;
   }
+
+  .actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 }
-/* Unified LNR admin design */
-.analytics{border-color:#e5e8e3;border-radius:12px;box-shadow:0 2px 6px #24332203;background:#fff;}
-.header{gap:16px;}
-.primaryButton{background:#edcd58;color:#242b22;border:1px solid #e3c248;border-radius:8px;font-size:12px;font-weight:600;min-height:38px;box-shadow:0 1px 2px #866f1610;}
-.primaryButton:hover:not(:disabled){background:#dfbd42;color:#242b22;}
-.outlineButton{border-radius:8px;font-size:12px;}
-.analytics{padding:24px;margin-top:24px;}
-.bar{background:#ddc265;}
-.headerActions{gap:12px;}

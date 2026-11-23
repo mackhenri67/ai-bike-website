@@ -5,8 +5,15 @@ import styles from "./RevenueAnalytics.module.css";
 import { ChevronDownIcon, DownloadIcon, EyeIcon, PrintIcon } from "./icons";
 
 type PeriodId = "7d" | "30d" | "6m" | "12m";
+type MetricId =
+  | "totalSales"
+  | "productSales"
+  | "ticketSales"
+  | "customBuildSales"
+  | "laborRevenue";
 
 type Period = { id: PeriodId; label: string };
+type Metric = { id: MetricId; label: string };
 
 const PERIODS: Period[] = [
   { id: "7d", label: "Last 7 Days" },
@@ -15,24 +22,26 @@ const PERIODS: Period[] = [
   { id: "12m", label: "Last 12 Months" },
 ];
 
-export type RevenuePoint = { label: string; value: number };
+const METRICS: Metric[] = [
+  { id: "totalSales", label: "Total Sales" },
+  { id: "productSales", label: "Product Sales" },
+  { id: "ticketSales", label: "Ticket Sales" },
+  { id: "customBuildSales", label: "Custom Build Sales" },
+  { id: "laborRevenue", label: "Labor Revenue" },
+];
 
-const FOOTER_TEXT: Record<PeriodId, string> = {
-  "7d": "Daily revenue for the past week",
-  "30d": "Weekly revenue for the past 8 weeks",
-  "6m": "Monthly revenue for the past 6 months",
-  "12m": "Monthly revenue for the past 12 months",
-};
-
-type RevenueAnalyticsProps = {
-  dailyData: RevenuePoint[];
-  weeklyData: RevenuePoint[];
-  monthlyData: RevenuePoint[];
-  error?: string | null;
+export type RevenuePoint = {
+  label: string;
+  value: number;
+  totalSales: number;
+  productSales: number;
+  ticketSales: number;
+  customBuildSales: number;
+  laborRevenue: number;
 };
 
 function formatPeso(value: number): string {
-  return `₱${value.toLocaleString("en-US")}`;
+  return `₱${value.toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
 }
 
 /** Compact axis label, e.g. ₱5k, ₱1.25M. */
@@ -46,6 +55,13 @@ function formatCompactPeso(value: number): string {
   return `₱${value}`;
 }
 
+type RevenueAnalyticsProps = {
+  dailyData: RevenuePoint[];
+  weeklyData: RevenuePoint[];
+  monthlyData: RevenuePoint[];
+  error?: string | null;
+};
+
 export default function RevenueAnalytics({
   dailyData,
   weeklyData,
@@ -53,68 +69,88 @@ export default function RevenueAnalytics({
   error: initialError,
 }: RevenueAnalyticsProps) {
   const [period, setPeriod] = useState<Period>(PERIODS[0]);
-  const [open, setOpen] = useState(false);
+  const [metric, setMetric] = useState<Metric>(METRICS[0]);
+  const [openDropdown, setOpenDropdown] = useState<"period" | "metric" | null>(null);
   const [showValues, setShowValues] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const metricDropdownRef = useRef<HTMLDivElement>(null);
+  const periodDropdownRef = useRef<HTMLDivElement>(null);
 
-  const data =
+  const periodData =
     period.id === "7d"
       ? dailyData
       : period.id === "30d"
         ? weeklyData
         : monthlyData;
+  const data = periodData.map((point) => ({
+    label: point.label,
+    value: point[metric.id],
+  }));
 
-  // Chart scale is derived from the real series so bars always fit the plot.
+  // Chart scale is derived from the selected real-data series.
   const rawMax = data.reduce((max, point) => Math.max(max, point.value), 0);
   const yMax = Math.max(1000, Math.ceil(rawMax / 1000) * 1000);
   const ySteps = Array.from({ length: 10 }, (_, index) => (10 - index) / 10);
-  // Bars keep a consistent visual rhythm while staying proportional.
   const barWidth = (100 / Math.max(data.length, 1)) * 0.8;
-  const error = actionError ?? initialError ?? null;
 
-  // Close the dropdown on outside click / Escape.
+  // Close either dropdown on outside click or Escape.
   useEffect(() => {
-    if (!open) return;
+    if (!openDropdown) return;
+
     const onPointerDown = (event: MouseEvent | TouchEvent) => {
-      if (!dropdownRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (
+        !metricDropdownRef.current?.contains(target) &&
+        !periodDropdownRef.current?.contains(target)
+      ) {
+        setOpenDropdown(null);
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") setOpenDropdown(null);
     };
+
     document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [openDropdown]);
 
   const selectPeriod = (next: Period) => {
     setPeriod(next);
-    setOpen(false);
+    setOpenDropdown(null);
+  };
+
+  const selectMetric = (next: Metric) => {
+    setMetric(next);
+    setOpenDropdown(null);
   };
 
   const handleExport = () => {
     const rows = [
-      ["Period", "Revenue"],
+      ["Period", metric.label],
       ...data.map((point) => [point.label, String(point.value)]),
     ];
     const csv = rows
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
       .join("\n");
-    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `revenue-${period.id}.csv`;
+    link.download = `revenue-${metric.id}-${period.id}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+
+  const error = initialError ?? null;
 
   return (
     <section className={styles.analytics} aria-label="Revenue analytics">
@@ -132,31 +168,71 @@ export default function RevenueAnalytics({
             <PrintIcon size={18} />
           </button>
 
-          <div className={styles.dropdown} ref={dropdownRef}>
+          <div className={styles.dropdown} ref={metricDropdownRef}>
+            <button
+              type="button"
+              className={`${styles.dropdownTrigger} ${styles.metricTrigger}`}
+              onClick={() =>
+                setOpenDropdown((current) =>
+                  current === "metric" ? null : "metric",
+                )
+              }
+              aria-haspopup="menu"
+              aria-expanded={openDropdown === "metric"}
+              aria-label="Select sales metric"
+            >
+              <span>{metric.label}</span>
+              <ChevronDownIcon
+                size={16}
+                className={`${styles.chevron} ${openDropdown === "metric" ? styles.chevronOpen : ""}`}
+              />
+            </button>
+            {openDropdown === "metric" ? (
+              <div className={styles.menu} role="menu">
+                {METRICS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={option.id === metric.id}
+                    className={`${styles.option} ${option.id === metric.id ? styles.optionActive : ""}`}
+                    onClick={() => selectMetric(option)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className={styles.dropdown} ref={periodDropdownRef}>
             <button
               type="button"
               className={styles.dropdownTrigger}
-              onClick={() => setOpen((value) => !value)}
+              onClick={() =>
+                setOpenDropdown((current) =>
+                  current === "period" ? null : "period",
+                )
+              }
               aria-haspopup="menu"
-              aria-expanded={open}
+              aria-expanded={openDropdown === "period"}
+              aria-label="Select date range"
             >
               <span>{period.label}</span>
               <ChevronDownIcon
                 size={16}
-                className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`}
+                className={`${styles.chevron} ${openDropdown === "period" ? styles.chevronOpen : ""}`}
               />
             </button>
-
-            {open ? (
+            {openDropdown === "period" ? (
               <div className={styles.menu} role="menu">
                 {PERIODS.map((option) => (
                   <button
                     key={option.id}
                     type="button"
-                    role="menuitem"
-                    className={`${styles.option} ${
-                      option.id === period.id ? styles.optionActive : ""
-                    }`}
+                    role="menuitemradio"
+                    aria-checked={option.id === period.id}
+                    className={`${styles.option} ${option.id === period.id ? styles.optionActive : ""}`}
                     onClick={() => selectPeriod(option)}
                   >
                     {option.label}
@@ -234,7 +310,7 @@ export default function RevenueAnalytics({
 
       <footer className={styles.footer}>
         <p className={styles.footerText}>
-          {error ?? FOOTER_TEXT[period.id]}
+          {error ?? `${metric.label} · ${period.label}`}
         </p>
 
         <div className={styles.actions}>
@@ -244,7 +320,7 @@ export default function RevenueAnalytics({
             onClick={() => setShowValues((value) => !value)}
           >
             <EyeIcon size={16} />
-            <span>View Exact Numbers</span>
+            <span>{showValues ? "Hide Exact Numbers" : "View Exact Numbers"}</span>
           </button>
           <button
             type="button"

@@ -3,9 +3,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { type DashboardStats, type QueryResult } from "@/lib/data/types";
 import { missingServiceRoleMessage, toFriendlyDbError } from "./errors";
 
-export async function getDashboardStats(): Promise<
-  QueryResult<DashboardStats>
-> {
+export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
 
@@ -15,9 +13,7 @@ export async function getDashboardStats(): Promise<
 
     const [products, newOrders, processingOrders, sales, lowStock] =
       await Promise.all([
-        admin
-          .from("products")
-          .select("id", { count: "exact", head: true }),
+        admin.from("products").select("id", { count: "exact", head: true }),
         admin
           .from("orders")
           .select("id", { count: "exact", head: true })
@@ -28,7 +24,7 @@ export async function getDashboardStats(): Promise<
           .in("status", ["pending", "shipping"]),
         admin
           .from("orders")
-          .select("total")
+          .select("subtotal, discount, custom_build_id, labor_cost")
           .gte("created_at", startOfToday.toISOString())
           .not("status", "eq", "cancelled"),
         admin
@@ -38,22 +34,34 @@ export async function getDashboardStats(): Promise<
           .neq("status", "archived"),
       ]);
 
+    if (sales.error) {
+      return { data: null, error: toFriendlyDbError(sales.error) };
+    }
+
+    // Dashboard Total Sales is intentionally Product Sales + Labor Revenue.
+    // Custom-bike builds and event tickets are separate dashboard filters.
     const todaySales =
-      (sales.data as { total: number }[] | null)?.reduce(
-        (sum, row) => sum + Number(row.total),
-        0
-      ) ?? 0;
+      (sales.data as
+        | {
+            subtotal: number;
+            discount: number;
+            custom_build_id: string | null;
+            labor_cost: number;
+          }[]
+        | null)?.reduce((sum, row) => {
+        const productSales = row.custom_build_id
+          ? 0
+          : Math.max(0, Number(row.subtotal) - Number(row.discount ?? 0));
+        return sum + productSales + Number(row.labor_cost ?? 0);
+      }, 0) ?? 0;
 
-    // --- Event signals (real data, no placeholders) ---------------------------
+    // --- Event signals (real data, no placeholders) -------------------------
     const nowIso = new Date().toISOString();
-
     const [{ data: nextEvent }, pendingSignups, draftEvents, outOfStock] =
       await Promise.all([
         admin
           .from("events")
-          .select(
-            "id, slug, title, event_date, capacity, slots_booked"
-          )
+          .select("id, slug, title, event_date, capacity, slots_booked")
           .eq("status", "published")
           .gte("event_date", nowIso)
           .order("event_date", { ascending: true })
@@ -113,7 +121,10 @@ export async function getDashboardStats(): Promise<
   } catch (error) {
     return {
       data: null,
-      error: error instanceof Error ? error.message : "Failed to load dashboard stats.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to load dashboard stats.",
     };
   }
 }
@@ -122,7 +133,26 @@ export type RevenueRange = "daily" | "weekly" | "monthly";
 
 export type RevenuePoint = {
   label: string;
+  /** Kept as an alias for Total Sales for compatibility with existing consumers. */
   value: number;
+  totalSales: number;
+  productSales: number;
+  ticketSales: number;
+  customBuildSales: number;
+  laborRevenue: number;
+};
+
+type OrderRevenueRow = {
+  created_at: string;
+  subtotal: number;
+  discount: number;
+  custom_build_id: string | null;
+  labor_cost: number;
+};
+
+type TicketRevenueRow = {
+  created_at: string;
+  amount_paid: number;
 };
 
 const REVENUE_BUCKETS: Record<RevenueRange, number> = {
@@ -153,13 +183,13 @@ function startOfUtcMonth(date: Date): Date {
 }
 
 /**
- * Revenue per time bucket for the admin dashboard chart. Only non-cancelled
- * orders count as revenue. Buckets (daily → past 7 days, weekly → past 8
- * weeks, monthly → past 12 months) are computed server-side from real order
- * records so the chart never renders placeholder numbers.
+ * Revenue by period and sales type. Product sales, custom-bike sales, and
+ * labor revenue come from non-cancelled orders. Ticket sales come only from
+ * paid, active event registrations. Total Sales is Product Sales + Labor
+ * Revenue, as requested; Ticket and Custom Build Sales remain separate.
  */
 export async function getRevenueSeries(
-  range: RevenueRange
+  range: RevenueRange,
 ): Promise<QueryResult<RevenuePoint[]>> {
   const admin = getAdminClient();
   if (!admin) return { data: null, error: missingServiceRoleMessage() };
@@ -175,11 +205,11 @@ export async function getRevenueSeries(
           : startOfUtcMonth(now);
 
     const buckets: { start: Date; end: Date; label: string }[] = [];
-    for (let i = count - 1; i >= 0; i--) {
+    for (let index = count - 1; index >= 0; index -= 1) {
       const start = new Date(anchor);
-      if (range === "daily") start.setUTCDate(start.getUTCDate() - i);
-      else if (range === "weekly") start.setUTCDate(start.getUTCDate() - i * 7);
-      else start.setUTCMonth(start.getUTCMonth() - i);
+      if (range === "daily") start.setUTCDate(start.getUTCDate() - index);
+      else if (range === "weekly") start.setUTCDate(start.getUTCDate() - index * 7);
+      else start.setUTCMonth(start.getUTCMonth() - index);
 
       const end = new Date(start);
       if (range === "daily") end.setUTCDate(end.getUTCDate() + 1);
@@ -204,24 +234,68 @@ export async function getRevenueSeries(
       });
     }
 
-    const { data, error } = await admin
-      .from("orders")
-      .select("created_at, total")
-      .gte("created_at", buckets[0].start.toISOString())
-      .not("status", "eq", "cancelled");
+    const firstBucket = buckets[0];
+    const [ordersResult, ticketsResult] = await Promise.all([
+      admin
+        .from("orders")
+        .select("created_at, subtotal, discount, custom_build_id, labor_cost")
+        .gte("created_at", firstBucket.start.toISOString())
+        .not("status", "eq", "cancelled"),
+      admin
+        .from("event_registrations")
+        .select("created_at, amount_paid")
+        .gte("created_at", firstBucket.start.toISOString())
+        .eq("payment_status", "paid")
+        .eq("status", "registered"),
+    ]);
 
-    if (error) return { data: null, error: toFriendlyDbError(error) };
+    if (ordersResult.error) {
+      return { data: null, error: toFriendlyDbError(ordersResult.error) };
+    }
+    if (ticketsResult.error) {
+      return { data: null, error: toFriendlyDbError(ticketsResult.error) };
+    }
 
-    const rows = (data ?? []) as { created_at: string; total: number }[];
+    const orderRows = (ordersResult.data ?? []) as OrderRevenueRow[];
+    const ticketRows = (ticketsResult.data ?? []) as TicketRevenueRow[];
+
     const series = buckets.map((bucket) => {
-      const value = rows.reduce((sum, row) => {
+      const ordersInBucket = orderRows.filter((row) => {
         const created = new Date(row.created_at);
-        if (created >= bucket.start && created < bucket.end) {
-          return sum + Number(row.total);
-        }
-        return sum;
+        return created >= bucket.start && created < bucket.end;
+      });
+      const ticketsInBucket = ticketRows.filter((row) => {
+        const created = new Date(row.created_at);
+        return created >= bucket.start && created < bucket.end;
+      });
+
+      const productSales = ordersInBucket.reduce((sum, row) => {
+        if (row.custom_build_id) return sum;
+        return sum + Math.max(0, Number(row.subtotal) - Number(row.discount ?? 0));
       }, 0);
-      return { label: bucket.label, value };
+      const customBuildSales = ordersInBucket.reduce((sum, row) => {
+        if (!row.custom_build_id) return sum;
+        return sum + Math.max(0, Number(row.subtotal) - Number(row.discount ?? 0));
+      }, 0);
+      const laborRevenue = ordersInBucket.reduce(
+        (sum, row) => sum + Number(row.labor_cost ?? 0),
+        0,
+      );
+      const ticketSales = ticketsInBucket.reduce(
+        (sum, row) => sum + Number(row.amount_paid ?? 0),
+        0,
+      );
+      const totalSales = productSales + laborRevenue;
+
+      return {
+        label: bucket.label,
+        value: totalSales,
+        totalSales,
+        productSales,
+        ticketSales,
+        customBuildSales,
+        laborRevenue,
+      };
     });
 
     return { data: series, error: null };
@@ -229,7 +303,9 @@ export async function getRevenueSeries(
     return {
       data: null,
       error:
-        error instanceof Error ? error.message : "Failed to load revenue analytics.",
+        error instanceof Error
+          ? error.message
+          : "Failed to load revenue analytics.",
     };
   }
 }
