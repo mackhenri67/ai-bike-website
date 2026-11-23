@@ -59,8 +59,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             </dl>
 
             <section className={styles.registrationOptions} aria-labelledby="registration-options-title">
-              <h2 id="registration-options-title" className={styles.optionsTitle}>Available registration categories</h2>
-              <p className={styles.optionsIntro}>Choose one of these ticket categories when you register.</p>
+              <h2 id="registration-options-title" className={styles.optionsTitle}>Registration categories</h2>
               <ul className={styles.optionsList}>
                 {registrationCategories.map((item) => <li key={item.name} className={styles.option}>
                   <span className={styles.optionName}>{item.name}</span>
