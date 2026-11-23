@@ -110,7 +110,7 @@ export default function HeroCarousel() {
 
         <div className={styles.socials}>
           <a
-            href="https://www.facebook.com/"
+            href="https://www.facebook.com/p/LnR-Cycle-center-100063694245362/"
             target="_blank"
             rel="noreferrer"
             className={styles.social}
