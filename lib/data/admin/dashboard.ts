@@ -38,8 +38,8 @@ export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> 
       return { data: null, error: toFriendlyDbError(sales.error) };
     }
 
-    // Dashboard Total Sales is intentionally Product Sales + Labor Revenue.
-    // Custom-bike builds and event tickets are separate dashboard filters.
+    // Dashboard Total Sales includes product orders, custom-bike builds,
+    // and labor revenue. Event ticket sales remain a separate dashboard filter.
     const todaySales =
       (sales.data as
         | {
@@ -49,10 +49,11 @@ export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> 
             labor_cost: number;
           }[]
         | null)?.reduce((sum, row) => {
-        const productSales = row.custom_build_id
-          ? 0
-          : Math.max(0, Number(row.subtotal) - Number(row.discount ?? 0));
-        return sum + productSales + Number(row.labor_cost ?? 0);
+        const orderSales = Math.max(
+          0,
+          Number(row.subtotal) - Number(row.discount ?? 0),
+        );
+        return sum + orderSales + Number(row.labor_cost ?? 0);
       }, 0) ?? 0;
 
     // --- Event signals (real data, no placeholders) -------------------------
@@ -185,8 +186,8 @@ function startOfUtcMonth(date: Date): Date {
 /**
  * Revenue by period and sales type. Product sales, custom-bike sales, and
  * labor revenue come from non-cancelled orders. Ticket sales come only from
- * paid, active event registrations. Total Sales is Product Sales + Labor
- * Revenue, as requested; Ticket and Custom Build Sales remain separate.
+ * paid, active event registrations. Total Sales includes Product Sales +
+ * Custom Build Sales + Labor Revenue; Ticket Sales remain separate.
  */
 export async function getRevenueSeries(
   range: RevenueRange,
@@ -285,7 +286,7 @@ export async function getRevenueSeries(
         (sum, row) => sum + Number(row.amount_paid ?? 0),
         0,
       );
-      const totalSales = productSales + laborRevenue;
+      const totalSales = productSales + customBuildSales + laborRevenue;
 
       return {
         label: bucket.label,
