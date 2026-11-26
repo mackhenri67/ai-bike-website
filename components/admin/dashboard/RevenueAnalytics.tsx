@@ -72,6 +72,8 @@ export default function RevenueAnalytics({
   const [metric, setMetric] = useState<Metric>(METRICS[0]);
   const [openDropdown, setOpenDropdown] = useState<"period" | "metric" | null>(null);
   const [showValues, setShowValues] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const metricDropdownRef = useRef<HTMLDivElement>(null);
   const periodDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -129,25 +131,36 @@ export default function RevenueAnalytics({
     setOpenDropdown(null);
   };
 
-  const handleExport = () => {
-    const rows = [
-      ["Period", metric.label],
-      ...data.map((point) => [point.label, String(point.value)]),
-    ];
-    const csv = rows
-      .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([`\uFEFF${csv}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `revenue-${metric.id}-${period.id}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handleExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const response = await fetch(
+        `/api/admin/dashboard/revenue-export?period=${period.id}`,
+        { method: "GET", cache: "no-store" },
+      );
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        throw new Error(result?.error ?? "The detailed sales export could not be generated.");
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") ?? "";
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1]
+        ?? `detailed-sales-${period.id}.csv`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : "The detailed sales export failed.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const error = initialError ?? null;
@@ -310,7 +323,7 @@ export default function RevenueAnalytics({
 
       <footer className={styles.footer}>
         <p className={styles.footerText}>
-          {error ?? `${metric.label} · ${period.label}`}
+          {exportError ?? error ?? `${metric.label} · ${period.label}`}
         </p>
 
         <div className={styles.actions}>
@@ -326,9 +339,10 @@ export default function RevenueAnalytics({
             type="button"
             className={styles.primaryButton}
             onClick={handleExport}
+            disabled={isExporting}
           >
             <DownloadIcon size={16} />
-            <span>Export to CSV</span>
+            <span>{isExporting ? "Preparing CSV..." : "Export to CSV"}</span>
           </button>
         </div>
       </footer>
