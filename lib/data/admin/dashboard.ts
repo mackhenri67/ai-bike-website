@@ -11,7 +11,7 @@ export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> 
     const startOfToday = new Date();
     startOfToday.setUTCHours(0, 0, 0, 0);
 
-    const [products, newOrders, processingOrders, sales, lowStock] =
+    const [products, newOrders, processingOrders, sales, ticketSales, lowStock] =
       await Promise.all([
         admin.from("products").select("id", { count: "exact", head: true }),
         admin
@@ -28,6 +28,12 @@ export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> 
           .gte("created_at", startOfToday.toISOString())
           .not("status", "eq", "cancelled"),
         admin
+          .from("event_registrations")
+          .select("amount_paid")
+          .gte("created_at", startOfToday.toISOString())
+          .eq("payment_status", "paid")
+          .eq("status", "registered"),
+        admin
           .from("products")
           .select("id", { count: "exact", head: true })
           .lt("stock", 5)
@@ -37,9 +43,12 @@ export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> 
     if (sales.error) {
       return { data: null, error: toFriendlyDbError(sales.error) };
     }
+    if (ticketSales.error) {
+      return { data: null, error: toFriendlyDbError(ticketSales.error) };
+    }
 
     // Dashboard Total Sales includes product orders, custom-bike builds,
-    // and labor revenue. Event ticket sales remain a separate dashboard filter.
+    // labor revenue, and paid event ticket registrations.
     const todaySales =
       (sales.data as
         | {
@@ -55,6 +64,12 @@ export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> 
         );
         return sum + orderSales + Number(row.labor_cost ?? 0);
       }, 0) ?? 0;
+    const todayTicketSales =
+      (ticketSales.data as { amount_paid: number }[] | null)?.reduce(
+        (sum, row) => sum + Number(row.amount_paid ?? 0),
+        0,
+      ) ?? 0;
+    const todayTotalSales = todaySales + todayTicketSales;
 
     // --- Event signals (real data, no placeholders) -------------------------
     const nowIso = new Date().toISOString();
@@ -101,7 +116,7 @@ export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> 
         newOrders: newOrders.count ?? 0,
         processingOrders: processingOrders.count ?? 0,
         totalProducts: products.count ?? 0,
-        todaySales,
+        todaySales: todayTotalSales,
         lowStockCount: lowStock.count ?? 0,
         nextEvent: nextEventData
           ? {
