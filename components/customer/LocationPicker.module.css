@@ -110,6 +110,9 @@
 }
 
 .mapFrame {
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
   height: 220px;
   border-radius: 6px;
   overflow: hidden;
