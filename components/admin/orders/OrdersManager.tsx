@@ -330,7 +330,7 @@ export default function OrdersManager({
                         </button>
                       )}
                       {order.status === "pending" && (
-                        <>
+                        <div className={styles.statusActions}>
                           {order.paymentMethod !== "GCash" && (
                             <button
                               type="button"
@@ -347,10 +347,10 @@ export default function OrdersManager({
                           >
                             Cancel
                           </button>
-                        </>
+                        </div>
                       )}
                       {order.status === "shipping" && (
-                        <>
+                        <div className={styles.statusActions}>
                           <button
                             type="button"
                             className={styles.completeButton}
@@ -365,7 +365,7 @@ export default function OrdersManager({
                           >
                             Cancel
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                   </td>
