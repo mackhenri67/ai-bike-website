@@ -9,7 +9,6 @@ import CustomerFooter from "@/components/customer/CustomerFooter";
 import AccountNav from "@/components/customer/AccountNav";
 import AccountPanel from "@/components/customer/AccountPanel";
 import ProfileForms from "./profile-forms";
-import SignOutButton from "./sign-out-button";
 import styles from "./page.module.css";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account Overview | LNR Cycle Center" };
@@ -22,7 +21,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const {customer,location,orders}=profile;
   const eventsResult=active==='events'?await listMyEventRegistrations(customer.id):null;
   return <><CustomerHeader/><main className={styles.page}><div className={styles.container}>
-    <div className={styles.headRow}><div><h1 className={styles.title}>Account Overview</h1><p className={styles.subtitle}>Hi, {customer.full_name}</p></div><SignOutButton/></div>
+    <div className={styles.headRow}><div><h1 className={styles.title}>Account Overview</h1><p className={styles.subtitle}>Hi, {customer.full_name}</p></div></div>
     <AccountNav active={active}/>
     <h2 className={styles.sectionHeading}>{active==='orders'?'My Orders':active==='events'?'My Events':'My Profile'}</h2>
     {active==='profile' ? <>
