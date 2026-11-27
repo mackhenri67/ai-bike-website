@@ -99,7 +99,6 @@
 }
 
 .table th {
-  position: relative;
   height: 40px;
   padding: 0 12px;
   font-size: 11px;
@@ -113,43 +112,6 @@
   text-overflow: ellipsis;
 }
 
-.resizeHandle {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  width: 9px;
-  cursor: col-resize;
-  touch-action: none;
-  user-select: none;
-  outline: none;
-}
-
-.resizeHandle::after {
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 4px;
-  width: 1px;
-  border-radius: 2px;
-  background: transparent;
-  content: "";
-  transition: background-color 0.12s ease, width 0.12s ease;
-}
-
-.resizeHandle:hover::after,
-.resizeHandle:focus-visible::after,
-.resizeHandleActive::after {
-  left: 3px;
-  width: 2px;
-  background: #b99a36;
-}
-
-.resizeHandle:focus-visible {
-  outline: 2px solid #b99a36;
-  outline-offset: -2px;
-}
 
 
 .table td {
@@ -928,9 +890,3 @@
 .workspaceTop{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:24px 0 18px;flex-wrap:wrap}.manualButton{padding:11px 17px;border:1px solid #1d2939;background:#1d2939;color:white;border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}.kindSwitch{display:flex;background:#eef1f5;border:1px solid #e4e7ec;border-radius:10px;padding:4px;gap:4px}.kindSwitch button{border:0;background:transparent;color:#667085;border-radius:7px;padding:10px 20px;font:inherit;font-size:13px;cursor:pointer}.kindSwitch button[aria-pressed=true]{background:white;color:#1d2939;box-shadow:0 1px 4px #10182813;font-weight:600}.statusFilters{display:flex;flex-wrap:wrap;gap:7px;border-bottom:1px solid #e4e7ec;padding-bottom:16px}.statusFilters button{background:white;border:1px solid #e1e5eb;border-radius:8px;padding:9px 14px;font:inherit;font-size:13px;color:#667085;cursor:pointer}.statusFilters button[aria-pressed=true]{background:#1d2939;border-color:#1d2939;color:white}.workspaceHint{margin:16px 0 0;font-size:12px;color:#667085;line-height:1.7}.table .dateSection th{background:#f1f4f8;color:#475467;font-size:12px;font-weight:650;text-align:left;padding:12px 16px;border-top:1px solid #e4e7ec;letter-spacing:.015em}.channelBadge{display:inline-block;padding:5px 8px;border-radius:6px;background:#edf4ff;color:#335f9c;font-size:11px;white-space:nowrap}.channelBadge[data-channel=in_store]{background:#eaf6ef;color:#27704a}
 
 
-/* Keep each resizable column at its chosen pixel width and scroll horizontally
-   when the combined table is wider than the available workspace. */
-.table {
-  width: max-content;
-  min-width: 100%;
-}
