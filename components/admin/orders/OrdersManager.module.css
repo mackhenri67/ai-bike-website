@@ -865,8 +865,8 @@
 }
 
 
-.actionsCell{flex-wrap:wrap;}
-.statusActions{display:flex;align-items:center;gap:7px;flex-wrap:nowrap;flex:0 0 auto;}
+.actionsCell{flex-wrap:nowrap;gap:5px;}
+.statusActions{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;flex:0 0 auto;}
 .gcashPendingActions{flex-wrap:nowrap;}
 
 /* Unified LNR admin design */
