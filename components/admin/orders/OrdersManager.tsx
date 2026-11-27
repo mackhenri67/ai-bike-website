@@ -54,7 +54,7 @@ const PAYMENT_STATUS_LABELS: Record<string, { label: string; className: string }
 
 /* Table column widths: Actions is widened so the map button + two status
    buttons can sit side by side without overflow. */
-const COLUMN_WIDTHS = [7, 13, 14, 8, 14, 9, 9, 26];
+const COLUMN_WIDTHS = [6, 12, 12, 8, 13, 8, 9, 32];
 
 function formatPeso(value: number): string {
   return `₱${value.toLocaleString("en-US")}`;
@@ -309,7 +309,7 @@ export default function OrdersManager({
                     </span>
                   </td>
                   <td>
-                    <div className={styles.actionsCell}>
+                    <div className={`${styles.actionsCell} ${order.paymentMethod === "GCash" && order.status === "pending" ? styles.gcashPendingActions : ""}`}>
 <RecordPreviewButton kind="order" record={{...order.source, status: order.status, payment_status: order.paymentStatus as OrderRow["payment_status"], gcash_payments: order.gcashPayment}}/>
                       <button
                         type="button"
@@ -330,16 +330,7 @@ export default function OrdersManager({
                         </button>
                       )}
                       {order.status === "pending" && (
-                        <div className={styles.statusActions}>
-                          {order.paymentMethod !== "GCash" && (
-                            <button
-                              type="button"
-                              className={styles.approveButton}
-                              onClick={() => handleApprove(order)}
-                            >
-                              Approve
-                            </button>
-                          )}
+                        order.paymentMethod === "GCash" ? (
                           <button
                             type="button"
                             className={styles.cancelButton}
@@ -347,7 +338,24 @@ export default function OrdersManager({
                           >
                             Cancel
                           </button>
-                        </div>
+                        ) : (
+                          <div className={styles.statusActions}>
+                            <button
+                              type="button"
+                              className={styles.approveButton}
+                              onClick={() => handleApprove(order)}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.cancelButton}
+                              onClick={() => void updateStatus(order.dbId, "cancelled")}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )
                       )}
                       {order.status === "shipping" && (
                         <div className={styles.statusActions}>
