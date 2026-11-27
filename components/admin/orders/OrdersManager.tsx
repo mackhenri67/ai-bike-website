@@ -54,7 +54,7 @@ const PAYMENT_STATUS_LABELS: Record<string, { label: string; className: string }
 
 /* Table column widths: Actions is widened so the map button + two status
    buttons can sit side by side without overflow. */
-const COLUMN_WIDTHS = [6, 11, 11, 8, 12, 7, 8, 37];
+const COLUMN_WIDTHS = [8, 14, 14, 8, 13, 8, 10, 24];
 
 function formatPeso(value: number): string {
   return `₱${value.toLocaleString("en-US")}`;
