@@ -8,6 +8,39 @@ import { isAdmin } from "@/lib/auth/roles";
 import { parseShippingFee, passwordValidation } from "@/lib/admin-settings-validation";
 import { revalidatePath } from "next/cache";
 export type SettingsResult = { error: string | null; saved: boolean; notice?: string };
+
+export async function saveAdminDisplayName(
+  _state: SettingsResult,
+  form: FormData,
+): Promise<SettingsResult> {
+  await requireAdmin();
+
+  const rawName = form.get("admin_display_name");
+  const displayName = typeof rawName === "string" ? rawName.trim() : "";
+  if (!displayName) {
+    return { saved: false, error: "Enter the name to display in the admin header." };
+  }
+  if (Array.from(displayName).length > 40) {
+    return { saved: false, error: "The admin display name must be 40 characters or fewer." };
+  }
+
+  const adminSession = await createAdminSessionClient();
+  if (!adminSession) {
+    return { saved: false, error: "The administrator session is unavailable. Please sign in again." };
+  }
+
+  const { error } = await adminSession.auth.updateUser({
+    data: { admin_display_name: displayName },
+  });
+  if (error) {
+    return { saved: false, error: "The admin display name could not be saved. Please try again." };
+  }
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin", "layout");
+  return { saved: true, error: null };
+}
+
 export async function saveShippingFee(_state: SettingsResult, form: FormData): Promise<SettingsResult> {
   const user = await requireAdmin();
   const fee = parseShippingFee(form.get("shipping_fee"));
