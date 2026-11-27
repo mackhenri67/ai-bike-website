@@ -2,7 +2,7 @@
 import {orderDay,orderDateLabel,orderSaleLabel,type OrderManagementTab} from "@/lib/order-management";
 import RecordPreviewButton from "@/components/admin/RecordPreviewButton";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import type { GcashPaymentRow, OrderRow, OrderStatus } from "@/lib/data/types";
 import {
   reviewGcashPaymentAction,
@@ -52,9 +52,20 @@ const PAYMENT_STATUS_LABELS: Record<string, { label: string; className: string }
   rejected: { label: "Rejected", className: styles.payRejected },
 };
 
-/* Table column widths: Actions is widened so the map button + two status
-   buttons can sit side by side without overflow. */
-const COLUMN_WIDTHS = [6, 12, 12, 8, 13, 8, 9, 32];
+/* Initial table widths in pixels. Each header divider can be dragged to
+   resize its column and the column immediately to its right. */
+const COLUMN_LABELS = [
+  "Order ID",
+  "Customer",
+  "Items",
+  "Total",
+  "Payment Method",
+  "Sales channel",
+  "Status",
+  "Actions",
+];
+const INITIAL_COLUMN_WIDTHS = [155, 180, 170, 115, 160, 135, 115, 360];
+const MIN_COLUMN_WIDTHS = [110, 140, 130, 90, 120, 105, 95, 300];
 
 function formatPeso(value: number): string {
   return `₱${value.toLocaleString("en-US")}`;
@@ -121,6 +132,15 @@ export default function OrdersManager({
     () => initialOrders.map(toDisplayOrder),
   );
   const [query, setQuery] = useState("");
+  const [columnWidths, setColumnWidths] = useState<number[]>(INITIAL_COLUMN_WIDTHS);
+  const [resizingColumn, setResizingColumn] = useState<number | null>(null);
+  const columnResizeRef = useRef<{
+    index: number;
+    pointerId: number;
+    startX: number;
+    startLeft: number;
+    startRight: number;
+  } | null>(null);
   useEffect(()=>{setOrders(initialOrders.map(toDisplayOrder));},[initialOrders]);
   const [verifying, setVerifying] = useState<DisplayOrder | null>(null);
   const [viewingLocation, setViewingLocation] = useState<DisplayOrder | null>(
@@ -147,6 +167,69 @@ export default function OrdersManager({
   }, [orders, query, activeTab]);
 
   const error = actionError ?? initialError ?? null;
+
+  const resizeColumnPair = (index: number, requestedDelta: number) => {
+    setColumnWidths((current) => {
+      const minDelta = MIN_COLUMN_WIDTHS[index] - current[index];
+      const maxDelta = current[index + 1] - MIN_COLUMN_WIDTHS[index + 1];
+      const delta = Math.max(minDelta, Math.min(maxDelta, requestedDelta));
+      const next = [...current];
+      next[index] += delta;
+      next[index + 1] -= delta;
+      return next;
+    });
+  };
+
+  const startColumnResize = (index: number, event: PointerEvent<HTMLSpanElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    columnResizeRef.current = {
+      index,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startLeft: columnWidths[index],
+      startRight: columnWidths[index + 1],
+    };
+    setResizingColumn(index);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const moveColumnResize = (event: PointerEvent<HTMLSpanElement>) => {
+    const current = columnResizeRef.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+
+    const minDelta = MIN_COLUMN_WIDTHS[current.index] - current.startLeft;
+    const maxDelta = current.startRight - MIN_COLUMN_WIDTHS[current.index + 1];
+    const delta = Math.max(
+      minDelta,
+      Math.min(maxDelta, event.clientX - current.startX),
+    );
+    setColumnWidths((widths) => {
+      const next = [...widths];
+      next[current.index] = current.startLeft + delta;
+      next[current.index + 1] = current.startRight - delta;
+      return next;
+    });
+  };
+
+  const stopColumnResize = (event: PointerEvent<HTMLSpanElement>) => {
+    const current = columnResizeRef.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    columnResizeRef.current = null;
+    setResizingColumn(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const handleColumnResizeKeyDown = (
+    index: number,
+    event: KeyboardEvent<HTMLSpanElement>,
+  ) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    resizeColumnPair(index, event.key === "ArrowRight" ? 12 : -12);
+  };
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     const order = orders.find((candidate) => candidate.dbId === id);
@@ -265,20 +348,33 @@ export default function OrdersManager({
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <colgroup>
-            {COLUMN_WIDTHS.map((width, index) => (
-                    <col key={`order-column-${index}`} style={{ width: `${width}%` }} />
-       ))}
-</colgroup>
+            {columnWidths.map((width, index) => (
+              <col key={`order-column-${index}`} style={{ width: `${width}px` }} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Items</th>
-              <th>Total</th>
-              <th>Payment Method</th>
-              <th>Sales channel</th>
-              <th>Status</th>
-              <th>Actions</th>
+              {COLUMN_LABELS.map((label, index) => (
+                <th key={label}>
+                  {label}
+                  {index < COLUMN_LABELS.length - 1 ? (
+                    <span
+                      className={`${styles.resizeHandle} ${resizingColumn === index ? styles.resizeHandleActive : ""}`}
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={`Resize ${label} column`}
+                      aria-valuenow={columnWidths[index]}
+                      tabIndex={0}
+                      title="Drag to resize column"
+                      onPointerDown={(event) => startColumnResize(index, event)}
+                      onPointerMove={moveColumnResize}
+                      onPointerUp={stopColumnResize}
+                      onPointerCancel={stopColumnResize}
+                      onKeyDown={(event) => handleColumnResizeKeyDown(index, event)}
+                    />
+                  ) : null}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
