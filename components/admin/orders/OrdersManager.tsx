@@ -54,7 +54,7 @@ const PAYMENT_STATUS_LABELS: Record<string, { label: string; className: string }
 
 /* Table column widths: Actions is widened so the map button + two status
    buttons can sit side by side without overflow. */
-const COLUMN_WIDTHS = [6, 12, 12, 8, 13, 8, 9, 32];
+const COLUMN_WIDTHS = [10, 11, 11, 8, 13, 7, 9, 31];
 
 function formatPeso(value: number): string {
   return `₱${value.toLocaleString("en-US")}`;
@@ -127,6 +127,7 @@ export default function OrdersManager({
     null,
   );
   const [actionError, setActionError] = useState<string | null>(null);
+  const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -147,6 +148,15 @@ export default function OrdersManager({
   }, [orders, query, activeTab]);
 
   const error = actionError ?? initialError ?? null;
+
+  const copyOrderNumber = async (orderId: string) => {
+    try {
+      await navigator.clipboard.writeText(orderId);
+      setCopiedOrderId(orderId);
+    } catch {
+      setActionError("Could not copy the order number. Please select and copy it manually.");
+    }
+  };
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     const order = orders.find((candidate) => candidate.dbId === id);
@@ -287,7 +297,30 @@ export default function OrdersManager({
                 <Fragment key={order.dbId}>
                 {index===0||orderDay(order.source.created_at)!==orderDay(visibleOrders[index-1].source.created_at)?<tr className={styles.dateSection}><th colSpan={8} scope="rowgroup">{orderDateLabel(order.source.created_at)}</th></tr>:null}
                 <tr>
-                  <td className={styles.cellId}>{order.id}</td>
+                  <td className={styles.cellId}>
+                    <div className={styles.orderIdContent}>
+                      <span className={styles.orderIdText} title={order.id}>{order.id}</span>
+                      <button
+                        type="button"
+                        className={styles.copyOrderId}
+                        onClick={() => void copyOrderNumber(order.id)}
+                        title={copiedOrderId === order.id ? "Order number copied" : "Copy order number"}
+                        aria-label={copiedOrderId === order.id ? `Order number ${order.id} copied` : `Copy order number ${order.id}`}
+                      >
+                        {copiedOrderId === order.id ? (
+                          <span aria-live="polite">Copied</span>
+                        ) : (
+                          <>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <rect x="8" y="8" width="12" height="12" rx="2" />
+                              <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+                            </svg>
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </td>
                   <td>
                     <p className={styles.customerName}>{order.customer}</p>
                     <p className={styles.customerEmail}>{order.email}</p>
