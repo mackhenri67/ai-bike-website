@@ -52,8 +52,8 @@ const PAYMENT_STATUS_LABELS: Record<string, { label: string; className: string }
   rejected: { label: "Rejected", className: styles.payRejected },
 };
 
-/* Table column widths: Actions is widened so the map button + two status
-   buttons can sit side by side without overflow. */
+/* Table column widths: keep the action controls on one line while giving
+   the order details columns as much room as practical. */
 const COLUMN_WIDTHS = [8, 14, 14, 8, 13, 8, 10, 24];
 
 function formatPeso(value: number): string {
