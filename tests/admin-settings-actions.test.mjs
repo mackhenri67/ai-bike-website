@@ -53,13 +53,13 @@ const admin={id:'admin-a',email:'admin@example.com',app_metadata:{role:'admin'}}
 const state={saved:false,error:null};
 const form=(values)=>{const f=new FormData();for(const [k,v] of Object.entries(values))f.set(k,v);return f;};
 const passwords=(values={})=>form({current_password:'OldPassword1',new_password:'NewPassword2',confirm_password:'NewPassword2',...values});
-function setup({verified=admin,verifyError=null,refreshError=null,denied=false}={}){
+function setup({verified=admin,verifyError=null,refreshError=null,adminUpdateError=null,denied=false}={}){
  const calls=[];
  const load=loader({
   '@/lib/auth/guards':{requireAdmin:async()=>{if(denied)throw new Error('denied');return admin;}},
   '@/lib/supabase/config':{getSupabaseConfig:()=>({url:'https://example.supabase.co',anonKey:'public'})},
   '@supabase/supabase-js':{createClient:()=>({auth:{signInWithPassword:async(v)=>{calls.push(['verify',v]);return {data:{user:verified},error:verifyError};},updateUser:async(v)=>{calls.push(['update',v]);return {error:null};}}})},
-  '@/lib/supabase/server':{createAdminSessionClient:async()=>({auth:{signInWithPassword:async(v)=>{calls.push(['refresh',v]);return {error:refreshError};}}})},
+  '@/lib/supabase/server':{createAdminSessionClient:async()=>({auth:{signInWithPassword:async(v)=>{calls.push(['refresh',v]);return {error:refreshError};},updateUser:async(v)=>{calls.push(['admin-update',v]);return {error:adminUpdateError};}}})},
   '@/lib/supabase/admin':{getAdminClient:()=>({rpc:async(name,values)=>{calls.push(['rpc',name,values]);return {error:null};}})},
   'next/cache':{revalidatePath:()=>{}},
  });return {actions:load('app/admin/(shell)/settings/security-shipping-actions.ts'),calls,load};
@@ -77,3 +77,29 @@ test('Own password update refreshes admin session and does not return credential
 test('Refresh failure after saved password correctly requests a new sign-in',async()=>{const {actions}=setup({refreshError:{message:'expired'}});const result=await actions.changeAdminPassword(state,passwords());assert.equal(result.saved,true);assert.match(result.notice,/sign in again/);});
 test('Shipping action validates rate and uses the trusted signed-in admin ID',async()=>{const {actions,calls}=setup();assert.equal((await actions.saveShippingFee(state,form({shipping_fee:'12.345'}))).saved,false);assert.equal(calls.length,0);assert.equal((await actions.saveShippingFee(state,form({shipping_fee:'85.50',p_admin:'attacker'}))).saved,true);assert.equal(calls[0][2].p_admin,admin.id);assert.equal(calls[0][2].p_fee,85.5);});
 test('Fee validation accepts zero/decimals and rejects malformed or excessive values',()=>{const {load}=setup();const {parseShippingFee}=load('lib/admin-settings-validation.ts');for(const v of ['0','190','85.50'])assert.equal(parseShippingFee(v),Number(v));for(const v of ['',null,'-1','1.234','100001','1e3','NaN'])assert.equal(parseShippingFee(v),null);});
+
+
+test('Admin display name saves to admin user metadata without changing role',async()=>{
+ const {actions,calls}=setup();
+ const result=await actions.saveAdminDisplayName(state,form({admin_display_name:'LNR Store Manager'}));
+ assert.deepEqual(result,{saved:true,error:null});
+ assert.deepEqual(calls,[['admin-update',{data:{admin_display_name:'LNR Store Manager'}}]]);
+});
+
+test('Admin display name rejects blank and overlong values before updating metadata',async()=>{
+ const {actions,calls}=setup();
+ assert.equal((await actions.saveAdminDisplayName(state,form({admin_display_name:'   '}))).saved,false);
+ assert.equal((await actions.saveAdminDisplayName(state,form({admin_display_name:'A'.repeat(41)}))).saved,false);
+ assert.equal(calls.length,0);
+});
+
+test('Admin display name requires an authorized admin session and reports save failures',async()=>{
+ const denied=setup({denied:true});
+ await assert.rejects(denied.actions.saveAdminDisplayName(state,form({admin_display_name:'Manager'})),/denied/);
+ assert.equal(denied.calls.length,0);
+
+ const failed=setup({adminUpdateError:{message:'failed'}});
+ const result=await failed.actions.saveAdminDisplayName(state,form({admin_display_name:'Manager'}));
+ assert.equal(result.saved,false);
+ assert.match(result.error,/could not be saved/i);
+});
