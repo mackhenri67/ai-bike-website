@@ -37,7 +37,7 @@ export default async function AdminSettingsPage() {
     <section className={styles.page}>
       <h1 className={styles.title}>Settings</h1>
       <p className={styles.subtitle}>
-        Manage merchant GCash details, shipping fees, and your administrator password.
+        Manage your admin header name, merchant GCash details, shipping fees, and administrator password.
       </p>
 
       <AdminDisplayNameForm initialDisplayName={initialDisplayName} />
