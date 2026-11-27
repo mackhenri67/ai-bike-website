@@ -309,43 +309,65 @@ export default function OrdersManager({
                     </span>
                   </td>
                   <td>
-                    <div className={`${styles.actionsCell} ${order.paymentMethod === "GCash" && order.status === "pending" ? styles.gcashPendingActions : ""}`}>
-<RecordPreviewButton kind="order" record={{...order.source, status: order.status, payment_status: order.paymentStatus as OrderRow["payment_status"], gcash_payments: order.gcashPayment}}/>
-                      <button
-                        type="button"
-                        className={styles.mapButton}
-                        onClick={() => openLocation(order)}
-                        aria-label={`View delivery location for order ${order.id}`}
-                        title="View delivery location"
-                      >
-                        <MapPinIcon size={14} />
-                      </button>
-                      {order.paymentMethod === "GCash" && (
+                    <div className={styles.actionsCell}>
+                      <div className={styles.utilityActions}>
+                        <RecordPreviewButton kind="order" record={{...order.source, status: order.status, payment_status: order.paymentStatus as OrderRow["payment_status"], gcash_payments: order.gcashPayment}}/>
                         <button
                           type="button"
-                          className={styles.viewButton}
-                          onClick={() => openReview(order)}
+                          className={styles.mapButton}
+                          onClick={() => openLocation(order)}
+                          aria-label={`View delivery location for order ${order.id}`}
+                          title="View delivery location"
                         >
-                          View Payment
+                          <MapPinIcon size={14} />
                         </button>
-                      )}
-                      {order.status === "pending" && (
-                        order.paymentMethod === "GCash" ? (
+                      </div>
+                      <div className={styles.orderActions}>
+                        {order.paymentMethod === "GCash" && (
                           <button
                             type="button"
-                            className={styles.cancelButton}
-                            onClick={() => void updateStatus(order.dbId, "cancelled")}
+                            className={styles.viewButton}
+                            onClick={() => openReview(order)}
                           >
-                            Cancel
+                            View Payment
                           </button>
-                        ) : (
-                          <div className={styles.statusActions}>
+                        )}
+                        {order.status === "pending" && (
+                          order.paymentMethod === "GCash" ? (
                             <button
                               type="button"
-                              className={styles.approveButton}
-                              onClick={() => handleApprove(order)}
+                              className={styles.cancelButton}
+                              onClick={() => void updateStatus(order.dbId, "cancelled")}
                             >
-                              Approve
+                              Cancel
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className={styles.approveButton}
+                                onClick={() => handleApprove(order)}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.cancelButton}
+                                onClick={() => void updateStatus(order.dbId, "cancelled")}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          )
+                        )}
+                        {order.status === "shipping" && (
+                          <>
+                            <button
+                              type="button"
+                              className={styles.completeButton}
+                              onClick={() => void updateStatus(order.dbId, "completed")}
+                            >
+                              Complete
                             </button>
                             <button
                               type="button"
@@ -354,27 +376,9 @@ export default function OrdersManager({
                             >
                               Cancel
                             </button>
-                          </div>
-                        )
-                      )}
-                      {order.status === "shipping" && (
-                        <div className={styles.statusActions}>
-                          <button
-                            type="button"
-                            className={styles.completeButton}
-                            onClick={() => void updateStatus(order.dbId, "completed")}
-                          >
-                            Complete
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.cancelButton}
-                            onClick={() => void updateStatus(order.dbId, "cancelled")}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr></Fragment>
