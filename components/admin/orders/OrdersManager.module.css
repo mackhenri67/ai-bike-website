@@ -232,9 +232,23 @@
 
 .actionsCell {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  white-space: normal;
+}
+
+.utilityActions,
+.orderActions {
+  display: flex;
   align-items: center;
-  gap: 7px;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.orderActions {
+  width: 100%;
 }
 
 .approveButton,
@@ -865,9 +879,7 @@
 }
 
 
-.actionsCell{flex-wrap:wrap;}
-.statusActions{display:flex;align-items:center;gap:7px;flex-wrap:nowrap;flex:0 0 auto;}
-.gcashPendingActions{flex-wrap:nowrap;}
+.statusActions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;flex:0 0 auto;}
 
 /* Unified LNR admin design */
 .card{border-color:#e5e8e3;border-radius:12px;box-shadow:0 2px 6px #24332203;background:#fff;}
