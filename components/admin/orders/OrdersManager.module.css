@@ -890,18 +890,65 @@
 
 .workspaceTop{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:24px 0 18px;flex-wrap:wrap}.manualButton{padding:11px 17px;border:1px solid #1d2939;background:#1d2939;color:white;border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}.kindSwitch{display:flex;background:#eef1f5;border:1px solid #e4e7ec;border-radius:10px;padding:4px;gap:4px}.kindSwitch button{border:0;background:transparent;color:#667085;border-radius:7px;padding:10px 20px;font:inherit;font-size:13px;cursor:pointer}.kindSwitch button[aria-pressed=true]{background:white;color:#1d2939;box-shadow:0 1px 4px #10182813;font-weight:600}.statusFilters{display:flex;flex-wrap:wrap;gap:7px;border-bottom:1px solid #e4e7ec;padding-bottom:16px}.statusFilters button{background:white;border:1px solid #e1e5eb;border-radius:8px;padding:9px 14px;font:inherit;font-size:13px;color:#667085;cursor:pointer}.statusFilters button[aria-pressed=true]{background:#1d2939;border-color:#1d2939;color:white}.workspaceHint{margin:16px 0 0;font-size:12px;color:#667085;line-height:1.7}.table .dateSection th{background:#f1f4f8;color:#475467;font-size:12px;font-weight:650;text-align:left;padding:12px 16px;border-top:1px solid #e4e7ec;letter-spacing:.015em}.channelBadge{display:inline-block;padding:5px 8px;border-radius:6px;background:#edf4ff;color:#335f9c;font-size:11px;white-space:nowrap}.channelBadge[data-channel=in_store]{background:#eaf6ef;color:#27704a}
 
-/* Compact order-row actions so the Actions column has more room. */
+/* Fit order actions inside their cell instead of letting fixed-width controls overflow. */
+.table {
+  min-width: 900px;
+}
+
+.actionsCell {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.actionsCell > button:first-child {
+  width: 25px;
+  height: 25px;
+  min-width: 25px;
+  flex: 0 0 25px;
+  padding: 0;
+}
+
+.actionsCell > button:first-child svg {
+  width: 15px;
+  height: 15px;
+}
+
+.mapButton {
+  width: 25px;
+  height: 25px;
+  min-width: 25px;
+  min-height: 25px;
+  flex: 0 0 25px;
+}
+
 .approveButton,
+.completeButton,
 .cancelButton {
-  width: 72px;
-  height: 27px;
-  font-size: 11px;
-  line-height: 14px;
+  width: 54px;
+  min-width: 54px;
+  height: 25px;
+  padding: 0 2px;
+  font-size: 10px;
+  line-height: 12px;
 }
 
 .viewButton {
-  height: 27px;
-  padding: 0 8px;
-  font-size: 11px;
-  line-height: 14px;
+  width: 64px;
+  min-width: 64px;
+  height: 25px;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 12px;
+}
+
+.statusActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
 }
