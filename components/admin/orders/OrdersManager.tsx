@@ -54,7 +54,7 @@ const PAYMENT_STATUS_LABELS: Record<string, { label: string; className: string }
 
 /* Table column widths: keep the action controls on one line while giving
    the order details columns as much room as practical. */
-const COLUMN_WIDTHS = [8, 14, 14, 8, 13, 8, 10, 24];
+const COLUMN_WIDTHS = [9, 15, 15, 9, 14, 9, 10, 18];
 
 function formatPeso(value: number): string {
   return `₱${value.toLocaleString("en-US")}`;
